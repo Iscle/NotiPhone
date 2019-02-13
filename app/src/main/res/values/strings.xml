@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">NotiPhone</string>
+
+    <string name="bluetooth_required">This app requires Bluetooth!</string>
+    <string name="bluetooth_enabled">Bluetooth has been enabled!</string>
+
+    <string name="title_home">Home</string>
+    <string name="title_files">Files</string>
+    <string name="title_settings">Settings</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
