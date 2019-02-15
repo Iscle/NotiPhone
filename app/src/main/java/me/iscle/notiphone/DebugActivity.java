@@ -1,5 +1,6 @@
 package me.iscle.notiphone;
 
+import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -15,6 +16,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+
+import me.iscle.notiphone.Interfaces.WatchServiceCallbacks;
 import me.iscle.notiphone.Services.WatchService;
 import me.iscle.notiphone.Services.WatchService.WatchBinder;
 
@@ -22,6 +26,7 @@ public class DebugActivity extends AppCompatActivity {
     private static final String TAG = "DebugActivity";
 
     private SharedPreferences sharedPreferences;
+    private WatchServiceCallbacks watchServiceCallbacks;
 
     public static final int REQUEST_ENABLE_BT = 0;
     public static final int REQUEST_PICK_FILE = 1;
@@ -30,34 +35,7 @@ public class DebugActivity extends AppCompatActivity {
     private WatchService watchService;
     private boolean watchServiceBound = false;
 
-    private ServiceConnection mConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            WatchBinder binder = (WatchBinder) service;
-            watchService = binder.getService();
-            watchServiceBound = true;
-
-            TextView bluetoothStatus = findViewById(R.id.isBluetoothConnected);
-
-            switch (watchService.getBluetoothStatus()) {
-                case 0:
-                    bluetoothStatus.setText("Bluetooth connected!");
-                    break;
-                case 1:
-                    bluetoothStatus.setText("Bluetooth adapter not found!");
-                    break;
-                case 2:
-                    bluetoothStatus.setText("Bluetooth not connected!");
-                    break;
-            }
-
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            watchServiceBound = false;
-        }
-    };
+    private ServiceConnection mConnection;
 
     @Override
     protected void onStart() {
@@ -78,6 +56,8 @@ public class DebugActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+
+        watchService.setWatchServiceCallbacks(null);
         unbindService(mConnection);
         watchServiceBound = false;
     }
@@ -86,6 +66,49 @@ public class DebugActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_debug);
+
+        watchServiceCallbacks = new WatchServiceCallbacks() {
+            @Override
+            public void updateBluetoothDevices(ArrayList<BluetoothDevice> bluetoothDevices) {
+                Toast.makeText(getApplicationContext(), "Toast from updateBluetoothDevices!", Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void updateWatchStatus(Watch watch) {
+                Toast.makeText(getApplicationContext(), "Toast from updateWatchStatus!", Toast.LENGTH_LONG).show();
+            }
+        };
+
+        mConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                WatchBinder binder = (WatchBinder) service;
+                watchService = binder.getService();
+                watchServiceBound = true;
+
+                watchService.setWatchServiceCallbacks(watchServiceCallbacks);
+
+                TextView bluetoothStatus = findViewById(R.id.isBluetoothConnected);
+
+                switch (watchService.getBluetoothStatus()) {
+                    case 0:
+                        bluetoothStatus.setText("Bluetooth connected!");
+                        break;
+                    case 1:
+                        bluetoothStatus.setText("Bluetooth adapter not found!");
+                        break;
+                    case 2:
+                        bluetoothStatus.setText("Bluetooth not connected!");
+                        break;
+                }
+
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                watchServiceBound = false;
+            }
+        };
 
         if (!watchServiceBound) {
             TextView bluetoothStatus = findViewById(R.id.isBluetoothConnected);

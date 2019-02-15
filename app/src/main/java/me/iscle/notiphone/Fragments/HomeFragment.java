@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import me.iscle.notiphone.R;
+import me.iscle.notiphone.Watch;
 
 public class HomeFragment extends Fragment {
     private static final String TAG = "HomeFragment";
@@ -34,5 +35,9 @@ public class HomeFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_home, container, false);
+    }
+
+    public void updateWatchStatus(Watch watch) {
+        // TODO: implement this method
     }
 }

@@ -15,10 +15,12 @@ import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 import android.util.Log;
 
+import java.util.Observable;
 import java.util.Set;
 
 import me.iscle.notiphone.App;
 import me.iscle.notiphone.DebugActivity;
+import me.iscle.notiphone.Interfaces.WatchServiceCallbacks;
 import me.iscle.notiphone.R;
 
 public class WatchService extends Service {
@@ -26,8 +28,13 @@ public class WatchService extends Service {
 
     private final IBinder mBinder = new WatchBinder();
     private BluetoothAdapter mBluetoothAdapter;
+    private WatchServiceCallbacks watchServiceCallbacks;
 
     private boolean watchConnected = false;
+
+    public static final int BLUETOOTH_ENABLED = 0;
+    public static final int BLUETOOTH_DISABLED = 1;
+    public static final int BLUETOOTH_NOT_FOUND = 2;
 
     public static final int SERVICE_NOTIFICATION_ID = 1;
     public static final int REQUEST_ENABLE_BT = 2;
@@ -38,11 +45,19 @@ public class WatchService extends Service {
 
         Log.d(TAG, "onCreate");
 
+        watchServiceCallbacks = null;
+
         // Get the phone's bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         Notification notification = newNotification("No watch connected...", "Click to open the app");
         startForeground(SERVICE_NOTIFICATION_ID, notification);
+    }
+
+    public void setWatchServiceCallbacks(WatchServiceCallbacks watchServiceCallbacks) {
+        this.watchServiceCallbacks = watchServiceCallbacks;
+        watchServiceCallbacks.updateWatchStatus(null);
+        watchServiceCallbacks.updateBluetoothDevices(null);
     }
 
     public void updateNotification(String title, String text) {
@@ -54,14 +69,17 @@ public class WatchService extends Service {
         notificationManager.notify(SERVICE_NOTIFICATION_ID, notification);
     }
 
+    // Returns the Bluetooth status
     public int getBluetoothStatus() {
         if (mBluetoothAdapter == null) {
-            return 1;
-        } else if (!mBluetoothAdapter.isEnabled()) {
-            return 2;
-        } else {
-            return 0;
+            return BLUETOOTH_NOT_FOUND;
         }
+
+        if (!mBluetoothAdapter.isEnabled()) {
+            return BLUETOOTH_DISABLED;
+        }
+
+        return BLUETOOTH_ENABLED;
     }
 
     public Set<BluetoothDevice> getBondedDevices() {
@@ -122,6 +140,12 @@ public class WatchService extends Service {
     public IBinder onBind(Intent intent) {
         Log.d(TAG, "onBind");
         return mBinder;
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        watchServiceCallbacks = null;
+        return super.onUnbind(intent);
     }
 
     public class WatchBinder extends Binder {

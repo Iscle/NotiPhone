@@ -1,5 +1,6 @@
 package me.iscle.notiphone;
 
+import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import androidx.annotation.NonNull;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -17,14 +18,19 @@ import android.widget.Button;
 import com.mikepenz.aboutlibraries.Libs;
 import com.mikepenz.aboutlibraries.LibsBuilder;
 
+import java.util.ArrayList;
+
 import me.iscle.notiphone.Activities.ConnectDeviceActivity;
 import me.iscle.notiphone.Activities.IntroActivity;
 import me.iscle.notiphone.Fragments.FilesFragment;
 import me.iscle.notiphone.Fragments.HomeFragment;
 import me.iscle.notiphone.Fragments.SettingsFragment;
+import me.iscle.notiphone.Interfaces.WatchServiceCallbacks;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
+
+    WatchServiceCallbacks watchServiceCallbacks;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,31 +40,22 @@ public class MainActivity extends AppCompatActivity {
         getSupportActionBar().setTitle("NotiPhone");
 
         Button debugButton = findViewById(R.id.debug_button);
-        debugButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), DebugActivity.class);
-                startActivity(intent);
-                finishAffinity();
-            }
+        debugButton.setOnClickListener(v -> {
+            Intent intent = new Intent(getApplicationContext(), DebugActivity.class);
+            startActivity(intent);
+            finishAffinity();
         });
 
         Button btActivityButton = findViewById(R.id.bt_activity_button);
-        btActivityButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), ConnectDeviceActivity.class);
-                startActivity(intent);
-            }
+        btActivityButton.setOnClickListener(v -> {
+            Intent intent = new Intent(getApplicationContext(), ConnectDeviceActivity.class);
+            startActivity(intent);
         });
 
         Button introActivityButton = findViewById(R.id.intro_activity_button);
-        introActivityButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), IntroActivity.class);
-                startActivity(intent);
-            }
+        introActivityButton.setOnClickListener(v -> {
+            Intent intent = new Intent(getApplicationContext(), IntroActivity.class);
+            startActivity(intent);
         });
 
         BottomNavigationView bottomNavigationView = findViewById(R.id.navigation);
@@ -67,31 +64,43 @@ public class MainActivity extends AppCompatActivity {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.fragment_container, new HomeFragment());
         transaction.commit();
-    }
 
-    OnNavigationItemSelectedListener navigationListener = new OnNavigationItemSelectedListener() {
-        @Override
-        public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-            Fragment newFragment = null;
+        watchServiceCallbacks = new WatchServiceCallbacks() {
+            @Override
+            public void updateBluetoothDevices(ArrayList<BluetoothDevice> bluetoothDevices) {
 
-            switch (menuItem.getItemId()) {
-                case R.id.navigation_home:
-                    newFragment = new HomeFragment();
-                    break;
-                case R.id.navigation_files:
-                    newFragment = new FilesFragment();
-                    break;
-                case R.id.navigation_settings:
-                    newFragment = new SettingsFragment();
-                    break;
             }
 
-            transaction.replace(R.id.fragment_container, newFragment);
-            transaction.commit();
+            @Override
+            public void updateWatchStatus(Watch watch) {
 
-            return true;
+            }
+        };
+    }
+
+    OnNavigationItemSelectedListener navigationListener = menuItem -> {
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        Fragment newFragment = null;
+
+        switch (menuItem.getItemId()) {
+            case R.id.navigation_home:
+                newFragment = new HomeFragment();
+                break;
+            case R.id.navigation_files:
+                newFragment = new FilesFragment();
+                break;
+            case R.id.navigation_settings:
+                newFragment = new SettingsFragment();
+                break;
+            default:
+                newFragment = new HomeFragment();
+                break;
         }
+
+        transaction.replace(R.id.fragment_container, newFragment);
+        transaction.commit();
+
+        return true;
     };
 
     @Override
@@ -108,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
                         .withActivityTitle("About")
                         .withAboutAppName("NotiPhone")
                         .withAboutIconShown(true)
+                        // TODO: CHANGE DESCRIPTION
                         .withAboutDescription("NotiPhone is an app created to...")
                         .withActivityStyle(Libs.ActivityStyle.LIGHT_DARK_TOOLBAR)
                         .withLicenseShown(true)

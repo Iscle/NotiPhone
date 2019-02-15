@@ -1,69 +1,48 @@
 package me.iscle.notiphone.Adapters;
 
+import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.database.DataSetObserver;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
+import android.widget.TextView;
 
-public class BluetoothListAdapter implements ListAdapter {
+import java.util.ArrayList;
 
-    @Override
-    public boolean areAllItemsEnabled() {
-        return false;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import me.iscle.notiphone.R;
+
+public class BluetoothListAdapter extends ArrayAdapter<BluetoothDevice> {
+    private static final String TAG = "BluetoothListAdapter";
+    
+    public BluetoothListAdapter(Context context, ArrayList<BluetoothDevice> devices) {
+        super(context, 0, devices);
     }
 
+    @NonNull
     @Override
-    public boolean isEnabled(int position) {
-        return false;
+    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+        Log.d(TAG, "getView: method called!");
+        if (convertView == null) {
+            Log.d(TAG, "getView: convertView is null!");
+            convertView = LayoutInflater.from(getContext()).inflate(R.layout.bluetooth_device_row, null);
+        }
+
+        BluetoothDevice device = getItem(position);
+
+        String bluetoothName = device.getName();
+        String bluetoothAddress = device.getAddress();
+
+        TextView deviceName = convertView.findViewById(R.id.device_name);
+        deviceName.setText(bluetoothName);
+
+        return convertView;
     }
 
-    @Override
-    public void registerDataSetObserver(DataSetObserver observer) {
 
-    }
-
-    @Override
-    public void unregisterDataSetObserver(DataSetObserver observer) {
-
-    }
-
-    @Override
-    public int getCount() {
-        return 0;
-    }
-
-    @Override
-    public Object getItem(int position) {
-        return null;
-    }
-
-    @Override
-    public long getItemId(int position) {
-        return 0;
-    }
-
-    @Override
-    public boolean hasStableIds() {
-        return false;
-    }
-
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        return null;
-    }
-
-    @Override
-    public int getItemViewType(int position) {
-        return 0;
-    }
-
-    @Override
-    public int getViewTypeCount() {
-        return 0;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return false;
-    }
 }
