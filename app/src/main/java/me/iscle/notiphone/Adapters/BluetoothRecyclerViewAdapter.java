@@ -21,7 +21,7 @@ public class BluetoothRecyclerViewAdapter extends RecyclerView.Adapter<Bluetooth
     private ArrayList<BluetoothDevice> devices;
     private View.OnClickListener clickListener;
 
-    public BluetoothRecyclerViewAdapter(Context context, ArrayList<BluetoothDevice> devices, View.OnClickListener clickListener) {
+    public BluetoothRecyclerViewAdapter(ArrayList<BluetoothDevice> devices, View.OnClickListener clickListener) {
         this.devices = devices;
         this.clickListener = clickListener;
     }
@@ -29,7 +29,6 @@ public class BluetoothRecyclerViewAdapter extends RecyclerView.Adapter<Bluetooth
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        Log.d(TAG, "onCreateViewHolder");
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.bluetooth_device_row,
                 parent, false);
 
@@ -38,7 +37,6 @@ public class BluetoothRecyclerViewAdapter extends RecyclerView.Adapter<Bluetooth
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Log.d(TAG, "onBindViewHolder");
         holder.bindDevice(devices.get(position));
     }
 
