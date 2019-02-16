@@ -5,20 +5,22 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ListView;
+import android.widget.Button;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
-import me.iscle.notiphone.Adapters.BluetoothListAdapter;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import me.iscle.notiphone.Adapters.BluetoothRecyclerViewAdapter;
 import me.iscle.notiphone.R;
 
 public class ConnectDeviceActivity extends AppCompatActivity {
     private static final String TAG = "ConnectDeviceActivity";
 
-    BluetoothListAdapter bluetoothListAdapter;
+    BluetoothRecyclerViewAdapter bluetoothRecyclerViewAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,16 +32,22 @@ public class ConnectDeviceActivity extends AppCompatActivity {
 
         BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
 
-        ListView lv = findViewById(R.id.bluetooth_device_list);
-        bluetoothListAdapter = new BluetoothListAdapter(this, new ArrayList<>(ba.getBondedDevices()));
-        lv.setAdapter(bluetoothListAdapter);
+        View.OnClickListener bluetoothClickListener = v -> {
+            BluetoothRecyclerViewAdapter.ViewHolder vh = (BluetoothRecyclerViewAdapter.ViewHolder) v.getTag();
+            BluetoothDevice bd = vh.getDevice();
+            Toast.makeText(v.getContext(), bd.getName(), Toast.LENGTH_SHORT).show();
+        };
 
-        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Log.d(TAG, "onItemClick: " + bluetoothListAdapter.getItem(position).getName());
-            }
-        });
+        RecyclerView lv = findViewById(R.id.bluetooth_device_list);
+        bluetoothRecyclerViewAdapter = new BluetoothRecyclerViewAdapter(this, new ArrayList<>(ba.getBondedDevices()), bluetoothClickListener);
+        lv.setAdapter(bluetoothRecyclerViewAdapter);
+        lv.setLayoutManager(new LinearLayoutManager(this));
+        lv.addItemDecoration(new DividerItemDecoration(lv.getContext(), DividerItemDecoration.VERTICAL));
+
+        Button button = findViewById(R.id.addItem);
+        button.setOnClickListener((v -> {
+            bluetoothRecyclerViewAdapter.addItem((new ArrayList<>(ba.getBondedDevices())).get(0));
+        }));
     }
 
     @Override
