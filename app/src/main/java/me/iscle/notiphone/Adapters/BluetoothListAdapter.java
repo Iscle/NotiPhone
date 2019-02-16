@@ -19,28 +19,34 @@ import me.iscle.notiphone.R;
 
 public class BluetoothListAdapter extends ArrayAdapter<BluetoothDevice> {
     private static final String TAG = "BluetoothListAdapter";
+
+    // Layout to use for each row
+    private static final int ROW_LAYOUT = R.layout.bluetooth_device_row;
     
     public BluetoothListAdapter(Context context, ArrayList<BluetoothDevice> devices) {
-        super(context, 0, devices);
+        super(context, ROW_LAYOUT, devices);
     }
 
     @NonNull
     @Override
     public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-        Log.d(TAG, "getView: method called!");
+        // If the view is not already created, create it with the required row layout
         if (convertView == null) {
-            Log.d(TAG, "getView: convertView is null!");
-            convertView = LayoutInflater.from(getContext()).inflate(R.layout.bluetooth_device_row, null);
+            convertView = LayoutInflater.from(getContext()).inflate(ROW_LAYOUT, null);
         }
 
+        // Get the bluetooth device from the list for this position
         BluetoothDevice device = getItem(position);
 
-        String bluetoothName = device.getName();
-        String bluetoothAddress = device.getAddress();
+        // Set the device name
+        TextView deviceNameView = convertView.findViewById(R.id.device_name);
+        deviceNameView.setText(device.getName());
 
-        TextView deviceName = convertView.findViewById(R.id.device_name);
-        deviceName.setText(bluetoothName);
+        // Set the device address
+        TextView deviceAddressView = convertView.findViewById(R.id.device_address);
+        deviceAddressView.setText(device.getAddress());
 
+        // Return the populated view
         return convertView;
     }
 
