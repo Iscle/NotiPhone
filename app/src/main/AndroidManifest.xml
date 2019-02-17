@@ -53,8 +53,6 @@
 
         <service android:name=".Services.WatchService" />
 
-        <activity android:name=".Activities.DebugActivity" />
-
         <receiver android:name=".Receivers.BootBroadcastReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

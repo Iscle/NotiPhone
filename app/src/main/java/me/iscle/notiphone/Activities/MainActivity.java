@@ -67,9 +67,9 @@ public class MainActivity extends AppCompatActivity {
 
         Button debugButton = findViewById(R.id.debug_button);
         debugButton.setOnClickListener(v -> {
-            //Intent intent = new Intent(getApplicationContext(), DebugActivity.class);
-            //startActivity(intent);
-            watchService.write("Test".getBytes());
+            if (watchServiceBound) {
+                watchService.write("Test".getBytes());
+            }
         });
 
         Button btActivityButton = findViewById(R.id.bt_activity_button);
@@ -119,7 +119,9 @@ public class MainActivity extends AppCompatActivity {
                     String bluetoothName = data.getStringExtra("BluetoothName");
                     String bluetoothAddress = data.getStringExtra("BluetoothAddress");
 
-                    watchService.connect(bluetoothAddress);
+                    if (watchServiceBound) {
+                        watchService.connect(bluetoothAddress);
+                    }
                     Log.d(TAG, "onActivityResult (CONNECT_DEVICE): Selected " + bluetoothName + ":" + bluetoothAddress);
                 } else {
                     // Not connected
