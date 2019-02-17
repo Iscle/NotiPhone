@@ -33,7 +33,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity android:name=".Activities.ConnectDeviceActivity"></activity>
-        <activity android:name=".MainActivity">
+        <activity android:name=".Activities.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -50,9 +50,7 @@
         </service>
         <service android:name=".Services.WatchService" />
 
-        <activity android:name=".DebugActivity" />
-
-        <activity android:name=".Activities.IntroActivity" />
+        <activity android:name=".Activities.DebugActivity" />
 
         <receiver android:name=".Receivers.BootBroadcastReceiver">
             <intent-filter>

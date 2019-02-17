@@ -20,14 +20,6 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        CardView statusView = view.findViewById(R.id.status_view);
-        statusView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "onClick: Status CardView has been clicked.");
-            }
-        });
-
     }
 
     @Override

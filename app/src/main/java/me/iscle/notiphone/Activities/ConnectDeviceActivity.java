@@ -24,6 +24,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import me.iscle.notiphone.Adapters.BluetoothRecyclerViewAdapter;
 import me.iscle.notiphone.R;
 
+import static android.view.Window.FEATURE_INDETERMINATE_PROGRESS;
+
 public class ConnectDeviceActivity extends AppCompatActivity implements View.OnClickListener{
     private static final String TAG = "ConnectDeviceActivity";
 
@@ -38,6 +40,9 @@ public class ConnectDeviceActivity extends AppCompatActivity implements View.OnC
         getSupportActionBar().setTitle("Select a device - NotiPhone");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+        // Set result as canceled in case user doesn't choose a device
+        setResult(RESULT_CANCELED);
+
         // Get the default bluetooth adapter
         BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
 
@@ -49,9 +54,9 @@ public class ConnectDeviceActivity extends AppCompatActivity implements View.OnC
         btDevicesView.addItemDecoration(new DividerItemDecoration(btDevicesView.getContext(), DividerItemDecoration.VERTICAL));
         btDevicesView.setAdapter(bluetoothRecyclerViewAdapter);
 
-        Button findDevices = findViewById(R.id.scanForDevices);
-        findDevices.setOnClickListener(v -> {
-            Log.d(TAG, "findDevices");
+        Button startDiscovery = findViewById(R.id.start_discovery);
+        startDiscovery.setOnClickListener(v -> {
+            Log.d(TAG, "startDiscovery");
 
             LinearLayout buttonPanel = findViewById(R.id.button_panel);
             buttonPanel.setVisibility(View.INVISIBLE);
@@ -66,7 +71,11 @@ public class ConnectDeviceActivity extends AppCompatActivity implements View.OnC
             filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
             registerReceiver(receiver, filter);
 
-            BluetoothAdapter.getDefaultAdapter().startDiscovery();
+            // TODO: CHANGE THE FOLLOWING LINES
+            BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!btAdapter.isDiscovering()) {
+                btAdapter.startDiscovery();
+            }
         });
     }
 
@@ -77,8 +86,7 @@ public class ConnectDeviceActivity extends AppCompatActivity implements View.OnC
                 case BluetoothDevice.ACTION_FOUND:
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     bluetoothRecyclerViewAdapter.addItem(device);
-                    Log.d(TAG, "onReceive: New device found. " + device.getName()
-                    );
+                    Log.d(TAG, "onReceive: New device found. " + device.getName());
                     break;
                 case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
                     Log.d(TAG, "onReceive: Discovery finished.");
@@ -96,7 +104,21 @@ public class ConnectDeviceActivity extends AppCompatActivity implements View.OnC
 
     @Override
     protected void onDestroy() {
-        unregisterReceiver(receiver);
+        try {
+            unregisterReceiver(receiver);
+
+            // TODO: CHANGE THE FOLLOWING LINES
+            BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (btAdapter.isDiscovering()) {
+                btAdapter.cancelDiscovery();
+                ProgressBar scanningBar = findViewById(R.id.scanning_bar);
+                scanningBar.setVisibility(View.INVISIBLE);
+                LinearLayout buttonPanel = findViewById(R.id.button_panel);
+                buttonPanel.setVisibility(View.VISIBLE);
+            }
+        } catch (IllegalArgumentException e) {
+            Log.d(TAG, "onDestroy: Receiver already unregistered.");
+        }
         super.onDestroy();
     }
 
@@ -111,10 +133,22 @@ public class ConnectDeviceActivity extends AppCompatActivity implements View.OnC
         // Get the ViewHolder (item) that called the listener
         BluetoothRecyclerViewAdapter.ViewHolder vh = (BluetoothRecyclerViewAdapter.ViewHolder) v.getTag();
 
+        BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (btAdapter.isDiscovering()) {
+            btAdapter.cancelDiscovery();
+            ProgressBar scanningBar = findViewById(R.id.scanning_bar);
+            scanningBar.setVisibility(View.INVISIBLE);
+            LinearLayout buttonPanel = findViewById(R.id.button_panel);
+            buttonPanel.setVisibility(View.VISIBLE);
+        }
+
         // Get the BluetoothDevice from that item
         BluetoothDevice bd = vh.getDevice();
 
-        // Do whatever
-        Toast.makeText(v.getContext(), "Selected: " + bd.getName(), Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent();
+        intent.putExtra("BluetoothName", bd.getName());
+        intent.putExtra("BluetoothAddress", bd.getAddress());
+        setResult(RESULT_OK, intent);
+        finish();
     }
 }

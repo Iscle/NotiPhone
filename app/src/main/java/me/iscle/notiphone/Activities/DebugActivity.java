@@ -1,4 +1,4 @@
-package me.iscle.notiphone;
+package me.iscle.notiphone.Activities;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
@@ -19,8 +19,10 @@ import android.widget.Toast;
 import java.util.ArrayList;
 
 import me.iscle.notiphone.Interfaces.WatchServiceCallbacks;
+import me.iscle.notiphone.R;
 import me.iscle.notiphone.Services.WatchService;
 import me.iscle.notiphone.Services.WatchService.WatchBinder;
+import me.iscle.notiphone.Watch;
 
 public class DebugActivity extends AppCompatActivity {
     private static final String TAG = "DebugActivity";
@@ -57,7 +59,6 @@ public class DebugActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
 
-        watchService.setWatchServiceCallbacks(null);
         unbindService(mConnection);
         watchServiceBound = false;
     }
@@ -85,8 +86,6 @@ public class DebugActivity extends AppCompatActivity {
                 WatchBinder binder = (WatchBinder) service;
                 watchService = binder.getService();
                 watchServiceBound = true;
-
-                watchService.setWatchServiceCallbacks(watchServiceCallbacks);
 
                 TextView bluetoothStatus = findViewById(R.id.isBluetoothConnected);
 
