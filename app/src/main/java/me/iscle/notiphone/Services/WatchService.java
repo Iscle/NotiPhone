@@ -188,6 +188,7 @@ public class WatchService extends Service {
      */
     public synchronized void disconnected() {
         mState = STATE_NONE;
+        updateNotification("No watch connected...", "Click to open the app");
         // TODO: do something
     }
 

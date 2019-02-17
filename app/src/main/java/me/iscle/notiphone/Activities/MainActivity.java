@@ -65,6 +65,16 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
+        Intent serviceIntent = new Intent(this, WatchService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+
+        // Bind to WatchService
+        bindService(new Intent(this, WatchService.class), mConnection, Context.BIND_AUTO_CREATE);
+
         Button debugButton = findViewById(R.id.debug_button);
         debugButton.setOnClickListener(v -> {
             if (watchServiceBound) {
@@ -89,26 +99,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
-
-        Intent serviceIntent = new Intent(this, WatchService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
-        }
-
-        // Bind to WatchService
-        Intent intent = new Intent(this, WatchService.class);
-        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
+    protected void onDestroy() {
         unbindService(mConnection);
         watchServiceBound = false;
+        super.onDestroy();
     }
 
     @Override
@@ -121,6 +115,8 @@ public class MainActivity extends AppCompatActivity {
 
                     if (watchServiceBound) {
                         watchService.connect(bluetoothAddress);
+                    } else {
+                        Log.e(TAG, "onActivityResult: WatchService not bound!");
                     }
                     Log.d(TAG, "onActivityResult (CONNECT_DEVICE): Selected " + bluetoothName + ":" + bluetoothAddress);
                 } else {
