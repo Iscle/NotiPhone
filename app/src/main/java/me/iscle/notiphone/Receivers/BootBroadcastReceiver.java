@@ -15,19 +15,21 @@ public class BootBroadcastReceiver extends BroadcastReceiver {
     
     @Override
     public void onReceive(Context context, Intent intent) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences(App.SERVICE_PREFERENCES, Context.MODE_PRIVATE);
-        
-        if (sharedPreferences.getBoolean("autoStartService", false)) {
-            return;
-        }
+        if (intent.getAction().equals("android.intent.action.BOOT_COMPLETED")) {
+            SharedPreferences sharedPreferences = context.getSharedPreferences(App.SERVICE_PREFERENCES, Context.MODE_PRIVATE);
 
-        Log.d(TAG, "onReceive: Starting WatchService!");
+            if (sharedPreferences.getBoolean("autoStartService", false)) {
+                return;
+            }
 
-        Intent serviceIntent = new Intent(context, WatchService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(serviceIntent);
-        } else {
-            context.startService(serviceIntent);
+            Log.d(TAG, "onReceive: Starting WatchService!");
+
+            Intent serviceIntent = new Intent(context, WatchService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent);
+            } else {
+                context.startService(serviceIntent);
+            }
         }
     }
 }

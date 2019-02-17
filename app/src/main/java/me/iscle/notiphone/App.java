@@ -5,8 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.os.Build;
 
-import me.iscle.notiphone.Services.WatchService;
-
 public class App extends Application {
 
     public static final String SERVICE_CHANNEL_ID = "service_channel";

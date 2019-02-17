@@ -14,7 +14,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -23,8 +22,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import me.iscle.notiphone.Adapters.BluetoothRecyclerViewAdapter;
 import me.iscle.notiphone.R;
-
-import static android.view.Window.FEATURE_INDETERMINATE_PROGRESS;
 
 public class ConnectDeviceActivity extends AppCompatActivity implements View.OnClickListener{
     private static final String TAG = "ConnectDeviceActivity";

@@ -9,13 +9,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import static android.bluetooth.BluetoothClass.Device.WEARABLE_WRIST_WATCH;
 
 public final class BluetoothClient {
     private static final String TAG = "BluetoothClient";
