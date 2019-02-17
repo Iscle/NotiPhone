@@ -21,6 +21,7 @@
             android:paddingBottom="12dp">
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/status_view"
                 android:layout_width="match_parent"
                 android:layout_height="100dp"
                 android:layout_marginStart="8dp"
@@ -66,12 +67,14 @@
                         app:layout_constraintTop_toTopOf="parent">
 
                         <TextView
+                            android:id="@+id/watch_name"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Watch not connected..."
                             app:layout_constraintTop_toTopOf="parent" />
 
                         <TextView
+                            android:id="@+id/watch_description"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Click to connect a new watch..."

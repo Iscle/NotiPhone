@@ -120,10 +120,6 @@ public class DebugActivity extends AppCompatActivity {
         finishAffinity();
     }
 
-    private void startApp() {
-
-    }
-
     public void startService(View v) {
         Intent serviceIntent = new Intent(this, WatchService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -155,7 +151,6 @@ public class DebugActivity extends AppCompatActivity {
                 if (resultCode == RESULT_OK) {
                     // Bluetooth enabled
                     Toast.makeText(this, getText(R.string.bluetooth_enabled), Toast.LENGTH_LONG).show();
-                    startApp();
                 } else {
                     // Bluetooth not enabled
                     showBluetoothError();
@@ -169,8 +164,4 @@ public class DebugActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
 }
