@@ -4,9 +4,16 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -34,21 +41,63 @@ public class ConnectDeviceActivity extends AppCompatActivity implements View.OnC
         // Get the default bluetooth adapter
         BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
 
-        // Get the bonded bluetooth devices
-        ArrayList<BluetoothDevice> bondedDevices = new ArrayList<>(ba.getBondedDevices());
-
         // Create a new adapter for the RecyclerView and attach an onClickListener to it
-        bluetoothRecyclerViewAdapter = new BluetoothRecyclerViewAdapter(bondedDevices, this);
+        bluetoothRecyclerViewAdapter = new BluetoothRecyclerViewAdapter(new ArrayList<>(ba.getBondedDevices()), this);
 
         RecyclerView btDevicesView = findViewById(R.id.bluetooth_device_list);
         btDevicesView.setLayoutManager(new LinearLayoutManager(btDevicesView.getContext()));
         btDevicesView.addItemDecoration(new DividerItemDecoration(btDevicesView.getContext(), DividerItemDecoration.VERTICAL));
         btDevicesView.setAdapter(bluetoothRecyclerViewAdapter);
 
-        Button button = findViewById(R.id.addItem);
-        button.setOnClickListener((v -> {
-            bluetoothRecyclerViewAdapter.addItem(bondedDevices.get(0));
-        }));
+        Button findDevices = findViewById(R.id.scanForDevices);
+        findDevices.setOnClickListener(v -> {
+            Log.d(TAG, "findDevices");
+
+            LinearLayout buttonPanel = findViewById(R.id.button_panel);
+            buttonPanel.setVisibility(View.INVISIBLE);
+            ProgressBar scanningBar = findViewById(R.id.scanning_bar);
+            scanningBar.setVisibility(View.VISIBLE);
+
+            bluetoothRecyclerViewAdapter.setItems(new ArrayList<>(ba.getBondedDevices()));
+
+            // Register for broadcasts when a device is discovered.
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(BluetoothDevice.ACTION_FOUND);
+            filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+            registerReceiver(receiver, filter);
+
+            BluetoothAdapter.getDefaultAdapter().startDiscovery();
+        });
+    }
+
+    // Create a BroadcastReceiver for ACTION_FOUND and ACTION_DISCOVERY_FINISHED.
+    private final BroadcastReceiver receiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            switch (intent.getAction()) {
+                case BluetoothDevice.ACTION_FOUND:
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    bluetoothRecyclerViewAdapter.addItem(device);
+                    Log.d(TAG, "onReceive: New device found. " + device.getName()
+                    );
+                    break;
+                case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
+                    Log.d(TAG, "onReceive: Discovery finished.");
+                    unregisterReceiver(receiver);
+
+                    ProgressBar scanningBar = findViewById(R.id.scanning_bar);
+                    scanningBar.setVisibility(View.INVISIBLE);
+                    LinearLayout buttonPanel = findViewById(R.id.button_panel);
+                    buttonPanel.setVisibility(View.VISIBLE);
+
+                    break;
+            }
+        }
+    };
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(receiver);
+        super.onDestroy();
     }
 
     @Override

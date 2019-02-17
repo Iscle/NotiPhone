@@ -1,14 +1,13 @@
 package me.iscle.notiphone.Adapters;
 
 import android.bluetooth.BluetoothDevice;
-import android.content.Context;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 
 import androidx.annotation.NonNull;
@@ -16,13 +15,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import me.iscle.notiphone.R;
 
 public class BluetoothRecyclerViewAdapter extends RecyclerView.Adapter<BluetoothRecyclerViewAdapter.ViewHolder> {
-    private static final String TAG = "BluetoothRecyclerViewAd";
 
     private ArrayList<BluetoothDevice> devices;
+    private Set<BluetoothDevice> devicesSet;
     private View.OnClickListener clickListener;
 
     public BluetoothRecyclerViewAdapter(ArrayList<BluetoothDevice> devices, View.OnClickListener clickListener) {
         this.devices = devices;
+        this.devicesSet = new HashSet<>(devices);
         this.clickListener = clickListener;
     }
 
@@ -46,26 +46,17 @@ public class BluetoothRecyclerViewAdapter extends RecyclerView.Adapter<Bluetooth
     }
 
     public void addItem(BluetoothDevice device) {
-        devices.add(device);
-        notifyItemInserted(devices.size() - 1);
+        if (!devicesSet.contains(device)) {
+            devicesSet.add(device);
+            devices.add(device);
+            notifyItemInserted(devices.size() - 1);
+        }
     }
 
-    public void removeItem(BluetoothDevice device) {
-        int position = devices.indexOf(device);
-        devices.remove(position);
-        notifyItemRemoved(position);
-    }
-
-    public BluetoothDevice getItem(int position) {
-        return devices.get(position);
-    }
-
-    public void setItems(Set<BluetoothDevice> devices) {
-        this.devices = new ArrayList<>(devices);
-    }
-
-    public ArrayList<BluetoothDevice> getItems() {
-        return devices;
+    public void setItems(ArrayList<BluetoothDevice> devices) {
+        this.devices = devices;
+        this.devicesSet = new HashSet<>(devices);
+        notifyDataSetChanged();
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
