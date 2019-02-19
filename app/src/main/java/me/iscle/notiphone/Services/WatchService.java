@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
+import me.iscle.notiphone.Activities.MainActivity;
 import me.iscle.notiphone.App;
 import me.iscle.notiphone.R;
 
@@ -106,7 +107,7 @@ public class WatchService extends Service {
     }
 
     public Notification newNotification(String title, String text) {
-        Intent notificationIntent = new Intent(this, WatchService.class);
+        Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent =
                 PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
@@ -225,8 +226,9 @@ public class WatchService extends Service {
                 // until it succeeds or throws an exception.
                 mmSocket.connect();
             } catch (IOException connectException) {
-                // Unable to connect; close the socket and return.
-                Log.d(TAG, "run: Unable to connect...");
+                // Connection failed; close the socket and return.
+                updateNotification("No watch connected...", "Click to open the app");
+                Log.d(TAG, "Connection failed!");
                 try {
                     mmSocket.close();
                 } catch (IOException closeException) {
