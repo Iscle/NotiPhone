@@ -8,12 +8,12 @@ public class Capsule {
     private static final String TAG = "Capsule";
 
     private int command;
-    private String jsonData;
+    private String data;
 
-    public Capsule(int command, String jsonData) {
-        Log.d(TAG, "Capsule: command = " + command + ", data = " + jsonData);
+    public Capsule(int command, String data) {
+        Log.d(TAG, "Capsule: command = " + command + ", data = " + data);
         this.command = command;
-        this.jsonData = jsonData;
+        this.data = data;
     }
 
     public byte[] toJSONByteArray() {
@@ -27,6 +27,6 @@ public class Capsule {
     }
 
     public String getData() {
-        return jsonData;
+        return data;
     }
 }

@@ -14,6 +14,8 @@ import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 import android.util.Log;
 
+import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,7 +23,10 @@ import java.util.UUID;
 
 import me.iscle.notiphone.Activities.MainActivity;
 import me.iscle.notiphone.App;
+import me.iscle.notiphone.Model.Capsule;
 import me.iscle.notiphone.R;
+
+import static me.iscle.notiphone.Constants.HANDLER_WATCH_CONNECTED;
 
 public class WatchService extends Service {
     private static final String TAG = "WatchService";
@@ -79,6 +84,12 @@ public class WatchService extends Service {
         notificationManager.notify(SERVICE_NOTIFICATION_ID, notification);
     }
 
+    public void setTestMessage() {
+        if (mHandler != null) {
+            mHandler.obtainMessage(HANDLER_WATCH_CONNECTED, 10, -1, "hola").sendToTarget();
+        }
+    }
+
     // Returns the Bluetooth status
     public int getBluetoothStatus() {
         if (mBluetoothAdapter == null) {
@@ -96,6 +107,14 @@ public class WatchService extends Service {
         // Start the thread to connect with the given device
         mConnectThread = new ConnectThread(mBluetoothAdapter.getRemoteDevice(deviceAddress));
         mConnectThread.start();
+    }
+
+    private void handleMessage(int bytes, byte[] buffer) {
+        Log.d(TAG, "handleMessage: " + new String(buffer, 0, bytes));
+        Capsule capsule = new Gson().fromJson(new String(buffer, 0, bytes), Capsule.class);
+        if (mHandler != null) {
+            mHandler.obtainMessage(69, bytes, -1, capsule.getData()).sendToTarget();
+        }
     }
 
     @Override
@@ -296,11 +315,9 @@ public class WatchService extends Service {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
-                    Log.d(TAG, "run: Received \"" + new String(buffer, 0, bytes) + "\"");
+                    handleMessage(bytes, buffer);
 
-                    if (mHandler != null) {
-                        mHandler.obtainMessage(1, bytes, -1, buffer).sendToTarget();
-                    }
+                    Log.d(TAG, "run: Received \"" + new String(buffer, 0, bytes) + "\"");
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
                     disconnected();

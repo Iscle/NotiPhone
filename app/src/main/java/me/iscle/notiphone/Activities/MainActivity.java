@@ -34,16 +34,13 @@ import com.mikepenz.aboutlibraries.LibsBuilder;
 
 import java.lang.ref.WeakReference;
 
-import me.iscle.notiphone.BuildConfig;
 import me.iscle.notiphone.Fragments.FilesFragment;
 import me.iscle.notiphone.Fragments.HomeFragment;
 import me.iscle.notiphone.Fragments.SettingsFragment;
-import me.iscle.notiphone.Model.Capsule;
 import me.iscle.notiphone.R;
 import me.iscle.notiphone.Services.WatchService;
 
 import static android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS;
-import static me.iscle.notiphone.Constants.CAPSULE_GET_APP_VERSION;
 import static me.iscle.notiphone.Constants.HANDLER_WATCH_CONNECTED;
 import static me.iscle.notiphone.Constants.HANDLER_WATCH_CONNECTING;
 import static me.iscle.notiphone.Constants.HANDLER_WATCH_CONNECTION_FAILED;
@@ -115,11 +112,7 @@ public class MainActivity extends AppCompatActivity {
         Button debugButton = findViewById(R.id.debug_button);
         debugButton.setOnClickListener(v -> {
             watchService.setTestMessage();
-            ignoreBatteryOptimisations();
-            Capsule testCapsule = new Capsule(CAPSULE_GET_APP_VERSION, BuildConfig.VERSION_NAME);
-            if (watchServiceBound) {
-                watchService.write("Test".getBytes());
-            }
+            //ignoreBatteryOptimisations();
         });
 
         Button btActivityButton = findViewById(R.id.bt_activity_button);
@@ -270,6 +263,10 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case HANDLER_WATCH_CONNECTING:
 
+                        break;
+
+                    case 69:
+                        activity.homeFragment.updateWatchInfo("LEM7", (String) msg.obj);
                         break;
                     default:
 
