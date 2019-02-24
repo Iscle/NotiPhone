@@ -28,15 +28,19 @@ import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
 import com.mikepenz.aboutlibraries.Libs;
 import com.mikepenz.aboutlibraries.LibsBuilder;
 
 
 import java.lang.ref.WeakReference;
+import java.util.TimerTask;
 
 import me.iscle.notiphone.Fragments.FilesFragment;
 import me.iscle.notiphone.Fragments.HomeFragment;
 import me.iscle.notiphone.Fragments.SettingsFragment;
+import me.iscle.notiphone.Model.Capsule;
+import me.iscle.notiphone.Model.PhoneNotification;
 import me.iscle.notiphone.R;
 import me.iscle.notiphone.Services.WatchService;
 
@@ -58,6 +62,8 @@ public class MainActivity extends AppCompatActivity {
     private HomeFragment homeFragment;
     private FilesFragment filesFragment;
     private SettingsFragment settingsFragment;
+
+    private Thread infoThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,6 +118,8 @@ public class MainActivity extends AppCompatActivity {
         Button debugButton = findViewById(R.id.debug_button);
         debugButton.setOnClickListener(v -> {
             watchService.setTestMessage();
+            PhoneNotification notification = new PhoneNotification(659, "Test from phone", "Text from phone notification");
+            watchService.write(new Capsule(1, new Gson().toJson(notification)).toJSON());
             //ignoreBatteryOptimisations();
         });
 
@@ -123,6 +131,10 @@ public class MainActivity extends AppCompatActivity {
 
         BottomNavigationView bottomNavigationView = findViewById(R.id.navigation);
         bottomNavigationView.setOnNavigationItemSelectedListener(navigationListener);
+
+        infoThread = new Thread(() -> {
+
+        });
     }
 
     public void ignoreBatteryOptimisations() {
@@ -212,31 +224,6 @@ public class MainActivity extends AppCompatActivity {
         return true;
     };
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.toolbar_menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_about:
-                new LibsBuilder()
-                        .withActivityTitle("About")
-                        .withAboutAppName("NotiPhone")
-                        .withAboutIconShown(true)
-                        // TODO: CHANGE DESCRIPTION
-                        .withAboutDescription("NotiPhone is an app created to...")
-                        .withActivityStyle(Libs.ActivityStyle.LIGHT_DARK_TOOLBAR)
-                        .withLicenseShown(true)
-                        .start(this);
-                break;
-        }
-
-        return true;
-    }
-
     private final MainHandler mHandler = new MainHandler(this);
 
     public static class MainHandler extends Handler {
@@ -273,6 +260,13 @@ public class MainActivity extends AppCompatActivity {
                         break;
                 }
             }
+        }
+    }
+
+    private static class InfoThread extends TimerTask {
+        @Override
+        public void run() {
+
         }
     }
 }

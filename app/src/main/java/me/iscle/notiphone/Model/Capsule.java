@@ -1,7 +1,5 @@
 package me.iscle.notiphone.Model;
 
-import android.util.Log;
-
 import com.google.gson.Gson;
 
 public class Capsule {
@@ -11,15 +9,12 @@ public class Capsule {
     private String data;
 
     public Capsule(int command, String data) {
-        Log.d(TAG, "Capsule: command = " + command + ", data = " + data);
         this.command = command;
         this.data = data;
     }
 
-    public byte[] toJSONByteArray() {
-        String json = new Gson().toJson(this);
-        Log.d(TAG, "toJSONByteArray: " + json);
-        return json.getBytes();
+    public String toJSON() {
+        return new Gson().toJson(this);
     }
 
     public int getCommand() {

@@ -7,7 +7,10 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -25,11 +28,16 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.UUID;
 
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import me.iscle.notiphone.Activities.MainActivity;
 import me.iscle.notiphone.App;
 import me.iscle.notiphone.Model.Capsule;
+import me.iscle.notiphone.Model.PhoneNotification;
 import me.iscle.notiphone.R;
 
+import static android.app.Notification.EXTRA_TITLE;
+import static android.app.Notification.EXTRA_TEXT;
+import static me.iscle.notiphone.Constants.BROADCAST_NOTIFICATION_POSTED;
 import static me.iscle.notiphone.Constants.HANDLER_WATCH_CONNECTED;
 
 public class WatchService extends Service {
@@ -57,6 +65,16 @@ public class WatchService extends Service {
     public static final int SERVICE_NOTIFICATION_ID = 1;
     public static final int REQUEST_ENABLE_BT = 2;
 
+    private BroadcastReceiver notificationListener = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+                PhoneNotification phoneNotification = new PhoneNotification(intent.getIntExtra("notificationId", 1), intent.getBundleExtra("notificationExtras").getString(EXTRA_TITLE), intent.getBundleExtra("notificationExtras").getString(EXTRA_TEXT));
+                Capsule capsule = new Capsule(1, new Gson().toJson(phoneNotification));
+                write(capsule.toJSON());
+            Log.d(TAG, "onReceive");
+        }
+    };
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -70,6 +88,8 @@ public class WatchService extends Service {
         if (mBluetoothAdapter == null) {
             Log.e(TAG, "onCreate: BluetoothAdapter is null!");
         }
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(notificationListener, new IntentFilter(BROADCAST_NOTIFICATION_POSTED));
 
         // Set the initial state
         mState = STATE_NONE;
@@ -121,6 +141,7 @@ public class WatchService extends Service {
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(notificationListener);
         stop();
         stopForeground(true);
         super.onDestroy();
@@ -239,6 +260,7 @@ public class WatchService extends Service {
         }
 
         public void run() {
+            Log.i(TAG, "Starting ConnectThread");
             // Cancel discovery because it otherwise slows down the connection.
             mBluetoothAdapter.cancelDiscovery();
 
@@ -265,12 +287,12 @@ public class WatchService extends Service {
 
             // Start the connected thread
             connected(mmSocket);
-            Log.i(TAG, "Finishing ConnectThread...");
+            Log.i(TAG, "Finishing ConnectThread");
         }
 
         // Closes the client socket and causes the thread to finish.
         void cancel() {
-            Log.i(TAG, "Closing sockets...");
+            Log.i(TAG, "Closing sockets");
             try {
                 mmSocket.close();
             } catch (IOException e) {
@@ -310,7 +332,7 @@ public class WatchService extends Service {
         }
 
         public void run() {
-            Log.i(TAG, "Started ConnectedThread...");
+            Log.i(TAG, "Started ConnectedThread");
 
             // Keep listening to the InputStream while connected
             while (mState == STATE_CONNECTED) {

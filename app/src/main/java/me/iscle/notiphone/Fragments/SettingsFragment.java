@@ -1,28 +1,58 @@
 package me.iscle.notiphone.Fragments;
 
-
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.widget.Toast;
 
+import com.mikepenz.aboutlibraries.Libs;
+import com.mikepenz.aboutlibraries.LibsBuilder;
+
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
+import me.iscle.notiphone.BuildConfig;
 import me.iscle.notiphone.R;
 
-public class SettingsFragment extends Fragment {
+public class SettingsFragment extends PreferenceFragmentCompat {
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-    }
+    public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+        // Load the preferences from an XML resource
+        setPreferencesFromResource(R.xml.fragment_settings, rootKey);
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_settings, container, false);
+        Preference feedbackButton = findPreference("feedback");
+        feedbackButton.setOnPreferenceClickListener(preference -> {
+            Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
+            emailIntent.setData(Uri.parse("mailto:albertiscle9@gmail.com"));
+            emailIntent.putExtra(Intent.EXTRA_SUBJECT, "NotiPhone Feedback");
+            emailIntent.putExtra(Intent.EXTRA_TEXT, "What do you think about the app?");
+
+            try {
+                startActivity(Intent.createChooser(emailIntent, "Send email using..."));
+            } catch (android.content.ActivityNotFoundException ex) {
+                Toast.makeText(getContext(), "No email clients installed.", Toast.LENGTH_SHORT).show();
+            }
+
+            return true;
+        });
+
+        Preference aboutButton = findPreference("about");
+        aboutButton.setOnPreferenceClickListener(preference -> {
+            new LibsBuilder()
+                    .withActivityTitle("About")
+                    .withAboutAppName("NotiPhone")
+                    .withAboutIconShown(true)
+                    // TODO: CHANGE DESCRIPTION
+                    .withAboutDescription("NotiPhone is an app created to...")
+                    .withActivityStyle(Libs.ActivityStyle.LIGHT_DARK_TOOLBAR)
+                    .withLicenseShown(true)
+                    .withFields(R.string.class.getFields())
+                    .start(getContext());
+            return true;
+        });
+
+        Preference versionText = findPreference("version");
+        versionText.setSummary(BuildConfig.VERSION_NAME);
     }
 
 }

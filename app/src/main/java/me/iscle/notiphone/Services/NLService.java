@@ -7,26 +7,39 @@ import android.service.notification.StatusBarNotification;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import static me.iscle.notiphone.Constants.BROADCAST_NOTIFICATION_POSTED;
+
 public class NLService extends NotificationListenerService {
     private static final String TAG = "NLService";
 
-    public static final String BCAST_NOTIFICATION_POSTED = "me.iscle.notiphone.NL.notification_posted";
-    public static final String BCAST_NOTIFICATION_REMOVED = "me.iscle.notiphone.NL.notification_removed";
-    public static final String BCAST_MUSIC_CHANGED = "me.iscle.notiphone.NL.music_changed";
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.d(TAG, "onCreate");
+    }
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn, RankingMap rankingMap) {
         super.onNotificationPosted(sbn, rankingMap);
 
-        Log.d(TAG, "onNotificationPosted: Received!");
+        Log.d(TAG, "onNotificationPosted");
 
-        Intent intent = new Intent();
-        intent.setAction(BCAST_NOTIFICATION_POSTED);
-        sendBroadcast(intent);
+        Intent newNotification = new Intent(BROADCAST_NOTIFICATION_POSTED);
 
         Bundle sbnExtras = sbn.getNotification().extras;
 
-        Toast.makeText(getApplicationContext(), "onNotificationPosted: " + sbn.getPackageName(), Toast.LENGTH_LONG).show();
+        newNotification.putExtra("notificationId", sbn.getId());
+        newNotification.putExtra("notificationPackage", sbn.getPackageName());
+        newNotification.putExtra("notificationIsOngoing", sbn.isOngoing());
+        newNotification.putExtra("notificationIsClearable", sbn.isClearable());
+        newNotification.putExtra("notificationExtras", sbnExtras);
+
+        // Send the broadcast
+        LocalBroadcastManager.getInstance(this).sendBroadcast(newNotification);
+
+        Toast.makeText(getApplicationContext(), "onNotificationPosted: " + sbn.getPackageName(), Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -38,4 +51,8 @@ public class NLService extends NotificationListenerService {
         Toast.makeText(getApplicationContext(), "onNotificationRemoved: " + sbn.getPackageName(), Toast.LENGTH_LONG).show();
     }
 
+    @Override
+    public void onNotificationRankingUpdate(RankingMap rankingMap) {
+        super.onNotificationRankingUpdate(rankingMap);
+    }
 }

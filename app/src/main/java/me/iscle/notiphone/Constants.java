@@ -16,7 +16,7 @@ public class Constants {
     public static final int HANDLER_WATCH_CONNECTION_FAILED = 4;
 
     // Broadcast constants
-    public static final int BROADCAST_NOTIFICATION_POSTED = 1;
-    public static final int BROADCAST_NOTIFICATION_REMOVED = 2;
+    public static final String BROADCAST_NOTIFICATION_POSTED = "me.iscle.notiphone.NOTIFICATION_POSTED";
+    public static final String BROADCAST_NOTIFICATION_REMOVED = "me.iscle.notiphone.NOTIFICATION_REMOVED";
 
 }
