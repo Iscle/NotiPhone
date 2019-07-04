@@ -5,15 +5,19 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
+
 import com.mikepenz.aboutlibraries.Libs;
 import com.mikepenz.aboutlibraries.LibsBuilder;
 
-import androidx.preference.Preference;
-import androidx.preference.PreferenceFragmentCompat;
+import me.iscle.notiphone.Activities.NewDeviceActivity;
 import me.iscle.notiphone.BuildConfig;
 import me.iscle.notiphone.R;
 
 public class SettingsFragment extends PreferenceFragmentCompat {
+
+    private static final int CONNECT_DEVICE = 1;
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -53,6 +57,14 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 
         Preference versionText = findPreference("version");
         versionText.setSummary(BuildConfig.VERSION_NAME);
+
+        Preference pairDeviceButton = findPreference("pairDevice");
+        pairDeviceButton.setSummary("Connected to LEM7");
+        pairDeviceButton.setOnPreferenceClickListener(preference -> {
+            Intent intent = new Intent(getContext(), NewDeviceActivity.class);
+            startActivityForResult(intent, CONNECT_DEVICE);
+            return true;
+        });
     }
 
 }

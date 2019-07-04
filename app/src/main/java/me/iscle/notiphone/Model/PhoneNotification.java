@@ -1,18 +1,18 @@
 package me.iscle.notiphone.Model;
 
 public class PhoneNotification {
-    int id;
+    String key;
     String title;
     String text;
 
-    public PhoneNotification(int id, String title, String text) {
-        this.id = id;
+    public PhoneNotification(String key, String title, String text) {
+        this.key = key;
         this.title = title;
         this.text = text;
     }
 
-    public int getId() {
-        return id;
+    public String getKey() {
+        return key;
     }
 
     public String getTitle() {

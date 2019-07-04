@@ -6,12 +6,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
 import me.iscle.notiphone.R;
 
 public class BluetoothRecyclerViewAdapter extends RecyclerView.Adapter<BluetoothRecyclerViewAdapter.ViewHolder> {
@@ -64,7 +65,7 @@ public class BluetoothRecyclerViewAdapter extends RecyclerView.Adapter<Bluetooth
         private TextView deviceAddressTv;
         private BluetoothDevice device = null;
 
-        private ViewHolder(@NonNull View itemView, View.OnClickListener clickListener) {
+        public ViewHolder(@NonNull View itemView, View.OnClickListener clickListener) {
             super(itemView);
             itemView.setTag(this);
             deviceNameTv = itemView.findViewById(R.id.device_name);
@@ -73,7 +74,7 @@ public class BluetoothRecyclerViewAdapter extends RecyclerView.Adapter<Bluetooth
             itemView.setOnClickListener(clickListener);
         }
 
-        private void bindDevice(BluetoothDevice device) {
+        public void bindDevice(BluetoothDevice device) {
             deviceNameTv.setText(device.getName());
             deviceAddressTv.setText(device.getAddress());
             this.device = device;

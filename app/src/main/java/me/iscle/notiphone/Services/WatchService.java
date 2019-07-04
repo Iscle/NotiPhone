@@ -14,8 +14,10 @@ import android.content.IntentFilter;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import androidx.core.app.NotificationCompat;
 import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.gson.Gson;
 
@@ -28,59 +30,49 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.UUID;
 
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import me.iscle.notiphone.Activities.MainActivity;
 import me.iscle.notiphone.App;
 import me.iscle.notiphone.Model.Capsule;
-import me.iscle.notiphone.Model.PhoneNotification;
 import me.iscle.notiphone.R;
 
-import static android.app.Notification.EXTRA_TITLE;
-import static android.app.Notification.EXTRA_TEXT;
 import static me.iscle.notiphone.Constants.BROADCAST_NOTIFICATION_POSTED;
+import static me.iscle.notiphone.Constants.BROADCAST_NOTIFICATION_REMOVED;
 import static me.iscle.notiphone.Constants.HANDLER_WATCH_CONNECTED;
 
 public class WatchService extends Service {
     private static final String TAG = "WatchService";
-
+    private static final UUID MY_UUID = UUID.fromString("c4547ff6-e6e4-4ccd-9a30-4cdce6249d19");
+    private static final int SERVICE_NOTIFICATION_ID = 1;
+    private static final int REQUEST_ENABLE_BT = 2;
     private final IBinder mBinder = new WatchBinder();
     private BluetoothAdapter mBluetoothAdapter;
     private Handler mHandler = null;
-    private static final UUID MY_UUID = UUID.fromString("c4547ff6-e6e4-4ccd-9a30-4cdce6249d19");
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
-
     private boolean watchConnected = false;
-    private int mState;
-
-    public static final int BLUETOOTH_ENABLED = 0;
-    public static final int BLUETOOTH_DISABLED = 1;
-    public static final int BLUETOOTH_NOT_FOUND = 2;
-
-    // Constants that indicate the current connection state
-    public static final int STATE_NONE = 0;       // we're doing nothing
-    public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
-    public static final int STATE_CONNECTED = 3;  // now connected to a remote device
-
-    public static final int SERVICE_NOTIFICATION_ID = 1;
-    public static final int REQUEST_ENABLE_BT = 2;
-
-    private BroadcastReceiver notificationListener = new BroadcastReceiver() {
+    private ConnectionState mState;
+    private BroadcastReceiver newNotificationListener = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-                PhoneNotification phoneNotification = new PhoneNotification(intent.getIntExtra("notificationId", 1), intent.getBundleExtra("notificationExtras").getString(EXTRA_TITLE), intent.getBundleExtra("notificationExtras").getString(EXTRA_TEXT));
-                Capsule capsule = new Capsule(1, new Gson().toJson(phoneNotification));
-                write(capsule.toJSON());
-            Log.d(TAG, "onReceive");
+            //PhoneNotification phoneNotification = new PhoneNotification(intent.getStringExtra("notificationKey"), intent.getBundleExtra("notificationExtras").getString(EXTRA_TITLE), intent.getBundleExtra("notificationExtras").getString(EXTRA_TEXT));
+            //Capsule capsule = new Capsule(1, new Gson().toJson(phoneNotification));
+            //write(capsule.toJSON());
+            //Log.d(TAG, "onReceive");
+        }
+    };
+    private BroadcastReceiver notificationRemovedListener = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //Capsule capsule = new Capsule(2, intent.getStringExtra("notificationKey"));
+            //write(capsule.toJson());
         }
     };
 
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "onCreate");
 
-        Notification notification = newNotification("No watch connected...", "Click to open the app");
+        Notification notification = newNotification("No watch connected...", "Click to open the app"); // TODO: Improve this
         startForeground(SERVICE_NOTIFICATION_ID, notification);
 
         // Get the phone's bluetooth adapter
@@ -89,42 +81,23 @@ public class WatchService extends Service {
             Log.e(TAG, "onCreate: BluetoothAdapter is null!");
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(notificationListener, new IntentFilter(BROADCAST_NOTIFICATION_POSTED));
+        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(this);
+        lbm.registerReceiver(newNotificationListener, new IntentFilter(BROADCAST_NOTIFICATION_POSTED));
+        lbm.registerReceiver(notificationRemovedListener, new IntentFilter(BROADCAST_NOTIFICATION_REMOVED));
 
         // Set the initial state
-        mState = STATE_NONE;
+        mState = ConnectionState.NONE;
     }
 
-    public void setHandler(Handler mHandler) {
-        this.mHandler = mHandler;
-    }
-
-    public void updateNotification(String title, String text) {
-        Log.d(TAG, "updateNotification");
-
+    private void updateNotification(String title, String text) {
         Notification notification = newNotification(title, text);
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notificationManager.notify(SERVICE_NOTIFICATION_ID, notification);
-    }
 
-    public void setTestMessage() {
         if (mHandler != null) {
-            mHandler.obtainMessage(HANDLER_WATCH_CONNECTED, 10, -1, "hola").sendToTarget();
+            mHandler.obtainMessage(HANDLER_WATCH_CONNECTED, "null").sendToTarget();
         }
-    }
-
-    // Returns the Bluetooth status
-    public int getBluetoothStatus() {
-        if (mBluetoothAdapter == null) {
-            return BLUETOOTH_NOT_FOUND;
-        }
-
-        if (!mBluetoothAdapter.isEnabled()) {
-            return BLUETOOTH_DISABLED;
-        }
-
-        return BLUETOOTH_ENABLED;
     }
 
     public void connect(String deviceAddress) {
@@ -134,20 +107,23 @@ public class WatchService extends Service {
     }
 
     private void handleMessage(String data) {
-        Log.d(TAG, "handleMessage: " + data);
         Capsule capsule = new Gson().fromJson(data, Capsule.class);
+        // TODO: Handle the message
+        switch (capsule.getCommand()) {
+
+        }
     }
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy");
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(notificationListener);
+        super.onDestroy();
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(newNotificationListener);
         stop();
         stopForeground(true);
-        super.onDestroy();
     }
 
-    public Notification newNotification(String title, String text) {
+    private Notification newNotification(String title, String text) { // TODO: Fix notifications
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent =
                 PendingIntent.getActivity(this, 0, notificationIntent, 0);
@@ -165,12 +141,12 @@ public class WatchService extends Service {
      *
      * @param socket The BluetoothSocket on which the connection was made
      */
-    public synchronized void connected(BluetoothSocket socket) {
+    private synchronized void connected(BluetoothSocket socket) {
         BluetoothDevice device = socket.getRemoteDevice();
-        Log.d(TAG, "Connected to: " + device.getName() + " (" + device.getAddress() + ")");
+        Log.d(TAG, "Connecting to: " + device.getName() + " (" + device.getAddress() + ")");
 
         updateNotification("Connecting to: " + device.getName(),
-                "Address: " + device.getAddress());
+                "Address: " + device.getAddress()); // TODO: Fix notifications
 
         // Cancel the thread that completed the connection
         if (mConnectThread != null) {
@@ -192,9 +168,7 @@ public class WatchService extends Service {
     /**
      * Stop all threads
      */
-    public synchronized void stop() {
-        Log.d(TAG, "stop");
-
+    private synchronized void stop() {
         if (mConnectedThread != null) {
             mConnectedThread.cancel();
             mConnectedThread = null;
@@ -205,7 +179,7 @@ public class WatchService extends Service {
             mConnectThread = null;
         }
 
-        mState = STATE_NONE;
+        disconnected();
     }
 
     /**
@@ -219,7 +193,7 @@ public class WatchService extends Service {
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
         synchronized (this) {
-            if (mState != STATE_CONNECTED) return;
+            if (mState != ConnectionState.CONNECTED) return;
             r = mConnectedThread;
         }
         // Perform the write unsynchronized
@@ -229,10 +203,32 @@ public class WatchService extends Service {
     /*
      * Indicate that the connection was lost
      */
-    public synchronized void disconnected() {
-        mState = STATE_NONE;
+    private synchronized void disconnected() {
+        mState = ConnectionState.NONE;
         updateNotification("No watch connected...", "Click to open the app");
-        // TODO: do something
+        // TODO: do something (tell the activity, etc)
+    }
+
+    public void setHandler(Handler mHandler) {
+        this.mHandler = mHandler;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mBinder;
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        // Set the Handler to null as we don't have any activity attached anymore
+        mHandler = null;
+        return super.onUnbind(intent);
+    }
+
+    private enum ConnectionState {
+        NONE, // We're doing nothing
+        CONNECTING, // Initiating an outgoing connection
+        CONNECTED // Connected to a remote device
     }
 
     /**
@@ -254,13 +250,12 @@ public class WatchService extends Service {
                 Log.e(TAG, "Error while creating the BluetoothSocket!", e);
             }
             mmSocket = tmp;
-            mState = STATE_CONNECTING;
+            mState = ConnectionState.CONNECTING;
             updateNotification("Connecting to " + device.getName() + "...",
-                    "Tap to open the app");
+                    "Tap to open the app"); // TODO: Improve notifications
         }
 
         public void run() {
-            Log.i(TAG, "Starting ConnectThread");
             // Cancel discovery because it otherwise slows down the connection.
             mBluetoothAdapter.cancelDiscovery();
 
@@ -270,13 +265,8 @@ public class WatchService extends Service {
                 mmSocket.connect();
             } catch (IOException connectException) {
                 // Connection failed; close the socket and return.
-                updateNotification("No watch connected...", "Click to open the app");
                 Log.d(TAG, "Error while creating the BluetoothSocket!");
-                try {
-                    mmSocket.close();
-                } catch (IOException closeException) {
-                    Log.e(TAG, "Could not close the socket!", closeException);
-                }
+                cancel();
                 return;
             }
 
@@ -287,17 +277,17 @@ public class WatchService extends Service {
 
             // Start the connected thread
             connected(mmSocket);
-            Log.i(TAG, "Finishing ConnectThread");
         }
 
         // Closes the client socket and causes the thread to finish.
         void cancel() {
-            Log.i(TAG, "Closing sockets");
             try {
                 mmSocket.close();
             } catch (IOException e) {
-                Log.e(TAG, "Could not close the socket!", e);
+                Log.e(TAG, "Could not close mmSocket!", e);
             }
+
+            disconnected();
         }
     }
 
@@ -311,7 +301,6 @@ public class WatchService extends Service {
         private final BufferedWriter mmOutStream;
 
         ConnectedThread(BluetoothSocket socket) {
-            Log.d(TAG, "Created ConnectedThread");
             mmSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
@@ -326,22 +315,21 @@ public class WatchService extends Service {
 
             mmInStream = new BufferedReader(new InputStreamReader(tmpIn));
             mmOutStream = new BufferedWriter(new OutputStreamWriter(tmpOut));
-            mState = STATE_CONNECTED;
+
+            mState = ConnectionState.CONNECTED;
             updateNotification("Connected to: " + socket.getRemoteDevice().getName(),
                     "Address: " + socket.getRemoteDevice().getAddress());
         }
 
         public void run() {
-            Log.i(TAG, "Started ConnectedThread");
-
             // Keep listening to the InputStream while connected
-            while (mState == STATE_CONNECTED) {
+            while (mState == ConnectionState.CONNECTED) {
                 try {
                     // Read from the InputStream
                     handleMessage(mmInStream.readLine());
                 } catch (IOException e) {
                     Log.e(TAG, "Disconnected from remote device!", e);
-                    disconnected();
+                    cancel();
                     break;
                 }
             }
@@ -355,9 +343,8 @@ public class WatchService extends Service {
         public void write(String data) {
             try {
                 mmOutStream.write(data);
-                // Write a carriage return after the data to indicate we've
-                // finished sending
-                mmOutStream.write("\r");
+                // Send a new line after the data
+                mmOutStream.newLine();
                 // Flush the stream to send the data
                 mmOutStream.flush();
             } catch (IOException e) {
@@ -368,24 +355,24 @@ public class WatchService extends Service {
         void cancel() {
             try {
                 mmInStream.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Error while closing mmInStream!", e);
+            }
+
+            try {
                 mmOutStream.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Error while closing mmOutStream!", e);
+            }
+
+            try {
                 mmSocket.close();
             } catch (IOException e) {
-                Log.e(TAG, "Error while closing the streams and socket!", e);
+                Log.e(TAG, "Error while closing mmSocket!", e);
             }
+
+            disconnected();
         }
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mBinder;
-    }
-
-    @Override
-    public boolean onUnbind(Intent intent) {
-        // Set the Handler to null as we don't have any activity attached anymore
-        mHandler = null;
-        return super.onUnbind(intent);
     }
 
     public class WatchBinder extends Binder {
