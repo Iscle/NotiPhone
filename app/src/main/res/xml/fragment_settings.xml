@@ -17,6 +17,16 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        app:key="misc_category"
+        app:title="Miscellaneous">
+
+        <Preference
+            app:key="manage_permissions"
+            app:title="Manage permissions" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         app:key="help_category"
         app:title="Help">
 

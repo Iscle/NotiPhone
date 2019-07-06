@@ -55,6 +55,7 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
             }
         }
     };
+    private BluetoothAdapter bluetoothAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,10 +70,10 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
         setResult(RESULT_CANCELED);
 
         // Get the default bluetooth adapter
-        BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         // Create a new adapter for the RecyclerView and attach an onClickListener to it
-        bluetoothRecyclerViewAdapter = new BluetoothRecyclerViewAdapter(new ArrayList<>(ba.getBondedDevices()), this);
+        bluetoothRecyclerViewAdapter = new BluetoothRecyclerViewAdapter(new ArrayList<>(bluetoothAdapter.getBondedDevices()), this);
 
         RecyclerView btDevicesView = findViewById(R.id.bluetooth_device_list);
         btDevicesView.setLayoutManager(new LinearLayoutManager(btDevicesView.getContext()));
@@ -112,7 +113,7 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
             ProgressBar scanningBar = findViewById(R.id.scanning_bar);
             scanningBar.setVisibility(View.VISIBLE);
 
-            bluetoothRecyclerViewAdapter.setItems(new ArrayList<>(ba.getBondedDevices()));
+            bluetoothRecyclerViewAdapter.setItems(new ArrayList<>(bluetoothAdapter.getBondedDevices()));
 
             // Register for broadcasts when a device is discovered.
             IntentFilter filter = new IntentFilter();
@@ -121,9 +122,8 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
             registerReceiver(receiver, filter);
 
             // TODO: CHANGE THE FOLLOWING LINES
-            BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
-            if (!btAdapter.isDiscovering()) {
-                btAdapter.startDiscovery();
+            if (!bluetoothAdapter.isDiscovering()) {
+                bluetoothAdapter.startDiscovery();
             }
         });
     }
@@ -134,14 +134,7 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
             unregisterReceiver(receiver);
 
             // TODO: CHANGE THE FOLLOWING LINES
-            BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
-            if (btAdapter.isDiscovering()) {
-                btAdapter.cancelDiscovery();
-                ProgressBar scanningBar = findViewById(R.id.scanning_bar);
-                scanningBar.setVisibility(View.INVISIBLE);
-                LinearLayout buttonPanel = findViewById(R.id.button_panel);
-                buttonPanel.setVisibility(View.VISIBLE);
-            }
+            bluetoothAdapter.cancelDiscovery();
         } catch (IllegalArgumentException e) {
             Log.d(TAG, "onDestroy: Receiver already unregistered.");
         }
@@ -159,9 +152,8 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
         // Get the FileViewHolder (item) that called the listener
         BluetoothRecyclerViewAdapter.ViewHolder vh = (BluetoothRecyclerViewAdapter.ViewHolder) v.getTag();
 
-        BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (btAdapter.isDiscovering()) {
-            btAdapter.cancelDiscovery();
+        if (bluetoothAdapter.isDiscovering()) {
+            bluetoothAdapter.cancelDiscovery();
             ProgressBar scanningBar = findViewById(R.id.scanning_bar);
             scanningBar.setVisibility(View.INVISIBLE);
             LinearLayout buttonPanel = findViewById(R.id.button_panel);

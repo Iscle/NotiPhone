@@ -24,6 +24,13 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         // Load the preferences from an XML resource
         setPreferencesFromResource(R.xml.fragment_settings, rootKey);
 
+        Preference managePermissionsButton = findPreference("manage_permissions");
+        managePermissionsButton.setOnPreferenceClickListener(preference -> {
+            startActivity(new Intent(getContext(), NewDeviceActivity.class));
+
+            return true;
+        });
+
         Preference feedbackButton = findPreference("feedback");
         feedbackButton.setOnPreferenceClickListener(preference -> {
             Intent emailIntent = new Intent(Intent.ACTION_SENDTO);

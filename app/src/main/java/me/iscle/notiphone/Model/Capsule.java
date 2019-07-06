@@ -2,13 +2,15 @@ package me.iscle.notiphone.Model;
 
 import com.google.gson.Gson;
 
-public class Capsule {
+import me.iscle.notiphone.Command;
+
+public final class Capsule {
     private static final transient Gson gson = new Gson();
 
-    private int command;
-    private String data;
+    private final Command command;
+    private final String data;
 
-    public Capsule(int command, Object data) {
+    public Capsule(Command command, Object data) {
         this.command = command;
         this.data = gson.toJson(data);
     }
@@ -17,7 +19,7 @@ public class Capsule {
         return gson.toJson(this);
     }
 
-    public int getCommand() {
+    public Command getCommand() {
         return command;
     }
 

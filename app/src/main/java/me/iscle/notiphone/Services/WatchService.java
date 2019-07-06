@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
@@ -32,9 +33,14 @@ import java.util.UUID;
 
 import me.iscle.notiphone.Activities.MainActivity;
 import me.iscle.notiphone.App;
+import me.iscle.notiphone.Command;
 import me.iscle.notiphone.Model.Capsule;
+import me.iscle.notiphone.Model.PhoneNotification;
+import me.iscle.notiphone.Model.Watch;
 import me.iscle.notiphone.R;
 
+import static android.os.BatteryManager.EXTRA_LEVEL;
+import static android.os.BatteryManager.EXTRA_SCALE;
 import static me.iscle.notiphone.Constants.BROADCAST_NOTIFICATION_POSTED;
 import static me.iscle.notiphone.Constants.BROADCAST_NOTIFICATION_REMOVED;
 import static me.iscle.notiphone.Constants.HANDLER_WATCH_CONNECTED;
@@ -43,74 +49,107 @@ public class WatchService extends Service {
     private static final String TAG = "WatchService";
     private static final UUID MY_UUID = UUID.fromString("c4547ff6-e6e4-4ccd-9a30-4cdce6249d19");
     private static final int SERVICE_NOTIFICATION_ID = 1;
-    private static final int REQUEST_ENABLE_BT = 2;
+
     private final IBinder mBinder = new WatchBinder();
     private BluetoothAdapter mBluetoothAdapter;
     private Handler mHandler = null;
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
-    private boolean watchConnected = false;
     private ConnectionState mState;
-    private BroadcastReceiver newNotificationListener = new BroadcastReceiver() {
+    final BroadcastReceiver batteryChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            //PhoneNotification phoneNotification = new PhoneNotification(intent.getStringExtra("notificationKey"), intent.getBundleExtra("notificationExtras").getString(EXTRA_TITLE), intent.getBundleExtra("notificationExtras").getString(EXTRA_TEXT));
-            //Capsule capsule = new Capsule(1, new Gson().toJson(phoneNotification));
-            //write(capsule.toJSON());
-            //Log.d(TAG, "onReceive");
+            sendBattery(intent);
         }
     };
-    private BroadcastReceiver notificationRemovedListener = new BroadcastReceiver() {
+    private final BroadcastReceiver notificationListener = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            //Capsule capsule = new Capsule(2, intent.getStringExtra("notificationKey"));
-            //write(capsule.toJson());
+            Bundle extras = intent.getExtras();
+            PhoneNotification pn = (PhoneNotification) extras.get("phoneNotification");
+
+            switch (intent.getAction()) {
+                case BROADCAST_NOTIFICATION_POSTED:
+                    write(new Capsule(Command.NOTIFICATION_POSTED, pn).toJson());
+                    break;
+                case BROADCAST_NOTIFICATION_REMOVED:
+                    write(new Capsule(Command.NOTIFICATION_REMOVED, pn).toJson());
+                    break;
+            }
         }
     };
+    private Watch currentWatch;
+
+    private void sendBattery(Intent i) {
+        int batteryLevel = (int) (100 * (((float) i.getIntExtra(EXTRA_LEVEL, 0)) / ((float) i.getIntExtra(EXTRA_SCALE, 1))));
+        write(new Capsule(Command.SET_BATTERY_STATUS, batteryLevel).toJson());
+    }
+
+    private void sendBattery() {
+        Intent intent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        sendBattery(intent);
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        Notification notification = newNotification("No watch connected...", "Click to open the app"); // TODO: Improve this
-        startForeground(SERVICE_NOTIFICATION_ID, notification);
-
         // Get the phone's bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
             Log.e(TAG, "onCreate: BluetoothAdapter is null!");
+            return;
         }
 
-        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(this);
-        lbm.registerReceiver(newNotificationListener, new IntentFilter(BROADCAST_NOTIFICATION_POSTED));
-        lbm.registerReceiver(notificationRemovedListener, new IntentFilter(BROADCAST_NOTIFICATION_REMOVED));
+        Context context = getApplicationContext();
+        startForeground(SERVICE_NOTIFICATION_ID,
+                getServiceNotification(context.getString(R.string.no_watch_connected), context.getString(R.string.click_to_open_the_app)));
+
+        IntentFilter notificationFilter = new IntentFilter();
+        notificationFilter.addAction(BROADCAST_NOTIFICATION_POSTED);
+        notificationFilter.addAction(BROADCAST_NOTIFICATION_REMOVED);
+        LocalBroadcastManager.getInstance(this).registerReceiver(notificationListener, notificationFilter);
+        registerReceiver(batteryChangedReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
         // Set the initial state
         mState = ConnectionState.NONE;
     }
 
     private void updateNotification(String title, String text) {
-        Notification notification = newNotification(title, text);
+        Notification notification = getServiceNotification(title, text);
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notificationManager.notify(SERVICE_NOTIFICATION_ID, notification);
 
-        if (mHandler != null) {
-            mHandler.obtainMessage(HANDLER_WATCH_CONNECTED, "null").sendToTarget();
-        }
+        if (mHandler != null)
+            mHandler.obtainMessage(HANDLER_WATCH_CONNECTED, new String[]{title, text}).sendToTarget();
+    }
+
+    private void updateNotification() {
+        updateNotification("Connected to: " + currentWatch.getName(), "Remaining battery: " + currentWatch.getBattery() + "%");
     }
 
     public void connect(String deviceAddress) {
         // Start the thread to connect with the given device
-        mConnectThread = new ConnectThread(mBluetoothAdapter.getRemoteDevice(deviceAddress));
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceAddress);
+        currentWatch = new Watch(device.getName(), device.getAddress());
+        mConnectThread = new ConnectThread(device);
         mConnectThread.start();
     }
 
     private void handleMessage(String data) {
+        Log.d(TAG, "handleMessage: " + data);
         Capsule capsule = new Gson().fromJson(data, Capsule.class);
-        // TODO: Handle the message
-        switch (capsule.getCommand()) {
 
+        switch (capsule.getCommand()) {
+            case SET_BATTERY_STATUS:
+                int batteryPercentage = capsule.getData(int.class);
+                currentWatch.setBattery(batteryPercentage);
+                updateNotification();
+                Log.d(TAG, "handleMessage: Watch battery: " + batteryPercentage);
+                break;
+            default:
+                Log.d(TAG, "handleMessage: Unknown command: " + capsule.getCommand());
         }
     }
 
@@ -118,13 +157,14 @@ public class WatchService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(newNotificationListener);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(notificationListener);
+        unregisterReceiver(batteryChangedReceiver);
         stop();
         stopForeground(true);
     }
 
-    private Notification newNotification(String title, String text) { // TODO: Fix notifications
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+    private Notification getServiceNotification(String title, String text) { // TODO: Fix notifications
+        Intent notificationIntent = new Intent(this, MainActivity.class); // Activity to open when tapping the notification
         PendingIntent pendingIntent =
                 PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
@@ -184,9 +224,6 @@ public class WatchService extends Service {
 
     /**
      * Write to the ConnectedThread in an unsynchronized manner
-     *
-     * @param data The bytes to write
-     * @see ConnectedThread#write(String)
      */
     public void write(String data) {
         // Create temporary object
@@ -297,31 +334,33 @@ public class WatchService extends Service {
      */
     private class ConnectedThread extends Thread {
         private final BluetoothSocket mmSocket;
-        private final BufferedReader mmInStream;
         private final BufferedWriter mmOutStream;
+        private final BufferedReader mmInStream;
 
         ConnectedThread(BluetoothSocket socket) {
             mmSocket = socket;
-            InputStream tmpIn = null;
             OutputStream tmpOut = null;
+            InputStream tmpIn = null;
 
             // Get the BluetoothSocket input and output streams
             try {
-                tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
+                tmpIn = socket.getInputStream();
             } catch (IOException e) {
                 Log.e(TAG, "Error while creating temporary streams!", e);
             }
 
-            mmInStream = new BufferedReader(new InputStreamReader(tmpIn));
             mmOutStream = new BufferedWriter(new OutputStreamWriter(tmpOut));
+            mmInStream = new BufferedReader(new InputStreamReader(tmpIn));
 
             mState = ConnectionState.CONNECTED;
-            updateNotification("Connected to: " + socket.getRemoteDevice().getName(),
-                    "Address: " + socket.getRemoteDevice().getAddress());
+            //updateNotification("Connected to: " + socket.getRemoteDevice().getName(),
+            //        "Remaining battery: -%");
         }
 
         public void run() {
+            sendBattery();
+
             // Keep listening to the InputStream while connected
             while (mState == ConnectionState.CONNECTED) {
                 try {

@@ -1,15 +1,15 @@
-package me.iscle.notiphone;
+package me.iscle.notiphone.Model;
 
 public class Watch {
-    private String name;
-    private String address;
-    private transient String battery;
+    private final String name;
+    private final String address;
+    private transient int battery;
     private long lastConnection;
 
     public Watch(String name, String address) {
         this.name = name;
         this.address = address;
-        this.battery = "--%";
+        this.battery = -1;
         this.lastConnection = -1;
     }
 
@@ -25,11 +25,11 @@ public class Watch {
         return address;
     }
 
-    public String getBattery() {
+    public int getBattery() {
         return battery;
     }
 
-    public void setBattery(String battery) {
+    public void setBattery(int battery) {
         this.battery = battery;
     }
 }

@@ -1,0 +1,9 @@
+package me.iscle.notiphone;
+
+public enum Command {
+    GET_BATTERY_STATUS,
+    SET_BATTERY_STATUS,
+    NOTIFICATION_POSTED,
+    NOTIFICATION_REMOVED,
+    NOTIFICATION_RANKING_UPDATE
+}

@@ -22,7 +22,7 @@ public class BootBroadcastReceiver extends BroadcastReceiver {
                 return;
             }
 
-            Log.d(TAG, "onReceive: Starting WatchService!");
+            Log.d(TAG, "BootBroadcastReceiver: Starting WatchService!");
 
             Intent serviceIntent = new Intent(context, WatchService.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

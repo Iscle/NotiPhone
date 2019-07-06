@@ -18,5 +18,5 @@ public class Constants {
     // Broadcast constants
     public static final String BROADCAST_NOTIFICATION_POSTED = "me.iscle.notiphone.NOTIFICATION_POSTED";
     public static final String BROADCAST_NOTIFICATION_REMOVED = "me.iscle.notiphone.NOTIFICATION_REMOVED";
-
+    public static final String BROADCAST_NOTIFICATION_RANKING_UPDATE = "me.iscle.notiphone.NOTIFICATION_RAKING_UPDATE";
 }

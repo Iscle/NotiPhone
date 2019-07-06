@@ -4,17 +4,8 @@ import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.bottomnavigation.BottomNavigationView.OnNavigationItemSelectedListener;
-
-import androidx.annotation.Nullable;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.ServiceConnection;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -23,6 +14,12 @@ import android.os.PowerManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentTransaction;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.bottomnavigation.BottomNavigationView.OnNavigationItemSelectedListener;
 
 import java.lang.ref.WeakReference;
 
@@ -48,6 +45,47 @@ public class MainActivity extends AppCompatActivity {
 
     private HomeFragment homeFragment;
     private SettingsFragment settingsFragment;
+    OnNavigationItemSelectedListener navigationListener = menuItem -> {
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+
+        switch (menuItem.getItemId()) {
+            case R.id.navigation_home:
+                setTitle("Home - NotiPhone");
+                transaction.show(homeFragment);
+                transaction.hide(settingsFragment);
+                break;
+            case R.id.navigation_settings:
+                setTitle("Settings - NotiPhone");
+                transaction.hide(homeFragment);
+                transaction.show(settingsFragment);
+                break;
+            default:
+                setTitle("Home - NotiPhone");
+                transaction.show(homeFragment);
+                transaction.hide(settingsFragment);
+                break;
+        }
+
+        transaction.commit();
+
+        return true;
+    };
+    private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            WatchService.WatchBinder binder = (WatchService.WatchBinder) service;
+            watchService = binder.getService();
+            watchServiceBound = true;
+
+            // Set the handler on the service
+            watchService.setHandler(mHandler);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            watchServiceBound = false;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,39 +118,20 @@ public class MainActivity extends AppCompatActivity {
         unbindService(mConnection);
     }
 
-    private ServiceConnection mConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            WatchService.WatchBinder binder = (WatchService.WatchBinder) service;
-            watchService = binder.getService();
-            watchServiceBound = true;
-
-            // Set the handler on the service
-            watchService.setHandler(mHandler);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            watchServiceBound = false;
-        }
-    };
-
     public void ignoreBatteryOptimisations() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-            if (powerManager.isIgnoringBatteryOptimizations(getPackageName())) {
-                Toast.makeText(this, "Ignoring battery optimizations!", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Not ignoring battery optimizations!", Toast.LENGTH_SHORT).show();
-                try {
-                    Intent intent = new Intent(ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-                    intent.setData(Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
-                } catch (ActivityNotFoundException e) {
-                    // Could not open the battery optimization settings!
-                    // Fallback to something else.
-                    Log.d(TAG, "ignoreBatteryOptimisations: Couldn't open battery optimisation activity!");
-                }
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        if (powerManager.isIgnoringBatteryOptimizations(getPackageName())) {
+            Toast.makeText(this, "Ignoring battery optimizations!", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Not ignoring battery optimizations!", Toast.LENGTH_SHORT).show();
+            try {
+                Intent intent = new Intent(ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            } catch (ActivityNotFoundException e) {
+                // Could not open the battery optimization settings!
+                // Fallback to something else.
+                Log.d(TAG, "ignoreBatteryOptimisations: Couldn't open battery optimisation activity!");
             }
         }
     }
@@ -131,37 +150,11 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 break;
-                default:
-                    super.onActivityResult(requestCode, resultCode, data);
-                    break;
+            default:
+                super.onActivityResult(requestCode, resultCode, data);
+                break;
         }
     }
-
-    OnNavigationItemSelectedListener navigationListener = menuItem -> {
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-
-        switch (menuItem.getItemId()) {
-            case R.id.navigation_home:
-                setTitle("Home - NotiPhone");
-                transaction.show(homeFragment);
-                transaction.hide(settingsFragment);
-                break;
-            case R.id.navigation_settings:
-                setTitle("Settings - NotiPhone");
-                transaction.hide(homeFragment);
-                transaction.show(settingsFragment);
-                break;
-            default:
-                setTitle("Home - NotiPhone");
-                transaction.show(homeFragment);
-                transaction.hide(settingsFragment);
-                break;
-        }
-
-        transaction.commit();
-
-        return true;
-    };
 
     public static class MainHandler extends Handler {
         private final WeakReference<MainActivity> mActivity;
@@ -176,11 +169,12 @@ public class MainActivity extends AppCompatActivity {
             if (mainActivity != null) {
                 switch (msg.what) {
                     case HANDLER_WATCH_CONNECTED:
+                        String[] data = (String[]) msg.obj;
                         HomeFragment homeFragment = mainActivity.homeFragment;
-                        homeFragment.updateWatchInfo("Connected to: LEM7", "Remaining battery: 69%");
+                        homeFragment.setStatus(data[0], data[1]);
                         break;
                     case HANDLER_WATCH_DISCONNECTED:
-                        mainActivity.homeFragment.updateWatchInfo("Watch not connected", "Click to connect a new watch");
+                        mainActivity.homeFragment.setStatus("Watch not connected", "Click to connect a new watch");
                         break;
                     case HANDLER_WATCH_CONNECTION_FAILED:
 
@@ -190,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
                         break;
 
                     case 69:
-                        mainActivity.homeFragment.updateWatchInfo("LEM7", (String) msg.obj);
+                        mainActivity.homeFragment.setStatus("LEM7", (String) msg.obj);
                         break;
                     default:
 
