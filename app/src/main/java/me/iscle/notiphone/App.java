@@ -3,6 +3,7 @@ package me.iscle.notiphone;
 import android.app.Application;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.Context;
 import android.os.Build;
 
 public class App extends Application {
@@ -26,7 +27,7 @@ public class App extends Application {
             NotificationChannel notificationChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, "Notifications", NotificationManager.IMPORTANCE_LOW);
 
             // Register the channel with the system
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.createNotificationChannel(serviceChannel);
             notificationManager.createNotificationChannel(notificationChannel);
         }
