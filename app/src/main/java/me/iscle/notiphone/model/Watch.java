@@ -1,5 +1,7 @@
 package me.iscle.notiphone.model;
 
+import android.bluetooth.BluetoothDevice;
+
 public class Watch {
     private final String name;
     private final String address;
@@ -7,9 +9,9 @@ public class Watch {
     private long lastConnection;
     private boolean isBLE;
 
-    public Watch(String name, String address) {
-        this.name = name;
-        this.address = address;
+    public Watch(BluetoothDevice device) {
+        this.name = device.getName();
+        this.address = device.getAddress();
         this.status = null;
         this.lastConnection = -1;
         this.isBLE = false;

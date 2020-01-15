@@ -8,11 +8,11 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.util.Base64;
-import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -43,6 +43,13 @@ public class Utils {
         }
 
         return result;
+    }
+
+    public static void writeLength(OutputStream os, int length) throws IOException {
+        os.write(length >> 24);
+        os.write(length >> 16);
+        os.write(length >> 8);
+        os.write(length);
     }
 
     public static int readLength(InputStream is) throws IOException {

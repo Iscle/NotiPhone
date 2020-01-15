@@ -6,7 +6,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -47,20 +46,30 @@ public class WatchService extends Service {
 
     private static final int SERVICE_NOTIFICATION_ID = 1;
 
+    private final Object bluetoothLock = new Object();
+    private final Object writeLock = new Object();
+
     private final IBinder mBinder = new WatchBinder();
 
     private BluetoothDevice currentDevice;
     private Watch currentWatch;
 
     private BluetoothAdapter bluetoothAdapter;
-    private ConnectThread connectThread;
-    private ConnectedThread connectedThread;
+    private ConnectionThread connectionThread;
     private ConnectionState state;
 
     private LocalBroadcastManager localBroadcastManager;
     private NotificationManager notificationManager;
 
     private HashMap<String, PhoneNotification> activeNotifications;
+
+    public Object getBluetoothLock() {
+        return bluetoothLock;
+    }
+
+    public Object getWriteLock() {
+        return writeLock;
+    }
 
     private final BroadcastReceiver batteryListener = new BroadcastReceiver() {
         @Override
@@ -81,12 +90,12 @@ public class WatchService extends Service {
                     if (pn.getTemplate() != null && pn.getTemplate().equals("android.app.Notification$DecoratedCustomViewStyle")) {
                         break;
                     }
-                    send(Command.NOTIFICATION_POSTED, pn);
+                    sendCommand(Command.NOTIFICATION_POSTED, pn);
                     break;
                 case BROADCAST_NOTIFICATION_REMOVED:
                     int notificationId = intent.getIntExtra("notificationId", 0);
                     activeNotifications.remove(notificationId);
-                    send(Command.NOTIFICATION_REMOVED, notificationId);
+                    sendCommand(Command.NOTIFICATION_REMOVED, notificationId);
                     break;
             }
         }
@@ -105,7 +114,7 @@ public class WatchService extends Service {
         int chargeStatus = batteryStatus.getIntExtra(EXTRA_STATUS, -1);
 
         Status status = new Status(batteryLevel, chargeStatus);
-        send(Command.SET_BATTERY_STATUS, status);
+        sendCommand(Command.SET_BATTERY_STATUS, status);
     }
 
     @Override
@@ -171,14 +180,14 @@ public class WatchService extends Service {
     }
 
     public void connect(String deviceAddress) {
-        // Start the thread to connect with the given device
-        currentDevice = bluetoothAdapter.getRemoteDevice(deviceAddress);
-        currentWatch = new Watch(currentDevice.getName(), currentDevice.getAddress());
-        if (connectThread != null) {
-            connectThread.cancel();
-        }
-        connectThread = new ConnectThread(this, currentDevice);
-        connectThread.start();
+        stop();
+
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceAddress);
+        currentDevice = device;
+        currentWatch = new Watch(device);
+
+        connectionThread = new ConnectionThread(WatchService.this, device);
+        connectionThread.start();
     }
 
     public void handleMessage(String data) {
@@ -236,66 +245,36 @@ public class WatchService extends Service {
     }
 
     /**
-     * Start the ConnectedThread to begin managing a Bluetooth connection
-     *
-     * @param socket The BluetoothSocket on which the connection was made
-     */
-    public synchronized void connected(BluetoothSocket socket) {
-        // Cancel the thread that completed the connection
-        if (connectThread != null) {
-            connectThread.cancel();
-            connectThread = null;
-        }
-
-        // Cancel any thread currently running a connection
-        if (connectedThread != null) {
-            connectedThread.cancel();
-            connectedThread = null;
-        }
-
-        // Start the thread to manage the connection and perform transmissions
-        connectedThread = new ConnectedThread(this, socket);
-        connectedThread.start();
-    }
-
-    /**
      * Stop all threads
      */
-    private synchronized void stop() {
-        if (connectedThread != null) {
-            connectedThread.cancel();
-            connectedThread = null;
+    private void stop() {
+        if (connectionThread != null) {
+            connectionThread.cancel();
+            connectionThread = null;
         }
-
-        if (connectThread != null) {
-            connectThread.cancel();
-            connectThread = null;
-        }
-
-        setState(ConnectionState.DISCONNECTED);
     }
 
     /*
      * Indicate that the connection was lost
      */
-    private synchronized void disconnected() {
+    private void disconnected() {
         updateNotification("No watch connected...", "Click to open the app");
         // TODO: do something (tell the activity, etc)
     }
 
-    private synchronized void connecting() {
+    private void connecting() {
         updateNotification("Connecting to " + (currentDevice.getName() == null ? "No name" : currentDevice.getName()) + "...",
                 "Tap to open the app"); // TODO: Improve notifications
-        connectThread = null;
     }
 
-    private synchronized void connected() {
+    private void connected() {
         sendBattery();
     }
 
-    public synchronized void send(Command command, Object object) {
-        if (getState() != ConnectionState.CONNECTED) return;
-        connectedThread.write(new Capsule(command, object).toJson());
+    public void sendCommand(Command command, Object object) {
+        if (connectionThread == null) return;
+        Log.d(TAG, "sendCommand: " + command + ", state: " + getState());
+        connectionThread.write(new Capsule(command, object).toJson());
     }
 
     @Override
@@ -308,8 +287,11 @@ public class WatchService extends Service {
         return super.onUnbind(intent);
     }
 
-    public synchronized void setState(ConnectionState newState) {
+    public void setState(ConnectionState newState) {
         if (this.state == newState) return;
+        this.state = newState;
+
+        Log.d(TAG, "setState: " + newState);
 
         switch (newState) {
             case DISCONNECTED:
@@ -322,8 +304,6 @@ public class WatchService extends Service {
                 connected();
                 break;
         }
-
-        this.state = newState;
     }
 
     public ConnectionState getState() {
