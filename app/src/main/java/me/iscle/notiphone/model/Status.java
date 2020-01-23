@@ -1,5 +1,7 @@
 package me.iscle.notiphone.model;
 
+import android.bluetooth.BluetoothSocket;
+
 public class Status {
     private byte batteryLevel;
     private int chargeStatus;

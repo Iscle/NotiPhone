@@ -127,6 +127,7 @@ public class ConnectionThread extends Thread {
             } catch (IOException e) {
                 Log.e(TAG, "Error while closing inputStream!", e);
             }
+            inputStream = null;
         }
 
         if (outputStream != null) {
@@ -135,6 +136,7 @@ public class ConnectionThread extends Thread {
             } catch (IOException e) {
                 Log.e(TAG, "Error while closing outputStream!", e);
             }
+            outputStream = null;
         }
 
         if (bluetoothSocket != null) {
@@ -143,6 +145,7 @@ public class ConnectionThread extends Thread {
             } catch (IOException e) {
                 Log.e(TAG, "Error while closing bluetoothSocket!", e);
             }
+            bluetoothSocket = null;
         }
 
         watchService.setState(ConnectionState.DISCONNECTED);

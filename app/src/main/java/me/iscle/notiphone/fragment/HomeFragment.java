@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -25,6 +26,8 @@ public class HomeFragment extends Fragment {
     private TextView watchDescription;
     private ImageView csPreview;
 
+    private FrameLayout notificationFrame;
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -34,8 +37,14 @@ public class HomeFragment extends Fragment {
         watchDescription = view.findViewById(R.id.watch_description);
         csPreview = view.findViewById(R.id.watch_image);
 
+        notificationFrame = view.findViewById(R.id.notificationFrame);
+
         CardView deviceStatus = view.findViewById(R.id.device_status);
         deviceStatus.setOnClickListener(view1 -> getActivity().startActivityForResult(new Intent(getContext(), NewDeviceActivity.class), 1));
+    }
+
+    public FrameLayout getNotificationFrame() {
+        return notificationFrame;
     }
 
     @Nullable
@@ -46,7 +55,9 @@ public class HomeFragment extends Fragment {
     }
 
     public void setStatus(String name, String description) {
-        watchName.setText(name);
-        watchDescription.setText(description);
+        if (watchName != null)
+            watchName.setText(name);
+        if (watchDescription != null)
+            watchDescription.setText(description);
     }
 }

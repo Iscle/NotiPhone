@@ -24,6 +24,8 @@ import com.google.gson.Gson;
 
 import java.util.HashMap;
 
+import me.iscle.notiphone.CommandHandler;
+import me.iscle.notiphone.LocalNotificationManager;
 import me.iscle.notiphone.activity.MainActivity;
 import me.iscle.notiphone.App;
 import me.iscle.notiphone.Command;
@@ -49,6 +51,8 @@ public class WatchService extends Service {
     private final Object bluetoothLock = new Object();
     private final Object writeLock = new Object();
 
+    private CommandHandler commandHandler;
+
     private final IBinder mBinder = new WatchBinder();
 
     private BluetoothDevice currentDevice;
@@ -60,8 +64,7 @@ public class WatchService extends Service {
 
     private LocalBroadcastManager localBroadcastManager;
     private NotificationManager notificationManager;
-
-    private HashMap<String, PhoneNotification> activeNotifications;
+    private LocalNotificationManager localNotificationManager;
 
     public Object getBluetoothLock() {
         return bluetoothLock;
@@ -85,21 +88,31 @@ public class WatchService extends Service {
 
             switch (intent.getAction()) {
                 case BROADCAST_NOTIFICATION_POSTED:
-                    PhoneNotification pn = (PhoneNotification) extras.get("phoneNotification");
-                    activeNotifications.put(pn.getId(), pn);
-                    if (pn.getTemplate() != null && pn.getTemplate().equals("android.app.Notification$DecoratedCustomViewStyle")) {
-                        break;
-                    }
+                    PhoneNotification pn = new Gson().fromJson(intent.getStringExtra("phoneNotification"), PhoneNotification.class);
+                    localNotificationManager.putActiveNotification(pn);
                     sendCommand(Command.NOTIFICATION_POSTED, pn);
                     break;
                 case BROADCAST_NOTIFICATION_REMOVED:
-                    int notificationId = intent.getIntExtra("notificationId", 0);
-                    activeNotifications.remove(notificationId);
+                    String notificationId = intent.getStringExtra("notificationId");
+                    localNotificationManager.removeActiveNotification(notificationId);
                     sendCommand(Command.NOTIFICATION_REMOVED, notificationId);
                     break;
             }
         }
     };
+
+    private void handleFirstConnection() {
+        sendBattery();
+        sendCurrentNotifications();
+    }
+
+    private void sendCurrentNotifications() {
+        for (StatusBarNotification sbn : notificationManager.getActiveNotifications()) {
+            PhoneNotification pn = new PhoneNotification(this, sbn);
+            sendCommand(Command.NOTIFICATION_POSTED, pn);
+            Log.d(TAG, "sendCurrentNotifications: " + pn.getId());
+        }
+    }
 
     private void sendBattery() {
         Intent intent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
@@ -128,13 +141,21 @@ public class WatchService extends Service {
             return;
         }
 
-        Context context = getApplicationContext();
         startForeground(SERVICE_NOTIFICATION_ID,
-                getServiceNotification(context.getString(R.string.no_watch_connected), context.getString(R.string.click_to_open_the_app)));
+                getServiceNotification(getString(R.string.no_watch_connected), getString(R.string.click_to_open_the_app)));
 
-        localBroadcastManager = LocalBroadcastManager.getInstance(context);
-        notificationManager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-        activeNotifications = new HashMap<>();
+        commandHandler = new CommandHandler(this);
+        localBroadcastManager = LocalBroadcastManager.getInstance(this);
+        setupNotifications();
+        registerReceiver(batteryListener, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+
+        // Set the initial state
+        setState(ConnectionState.DISCONNECTED);
+    }
+
+    private void setupNotifications() {
+        localNotificationManager = LocalNotificationManager.getInstance();
+        notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
         IntentFilter notificationFilter = new IntentFilter();
         notificationFilter.addAction(BROADCAST_NOTIFICATION_POSTED);
@@ -144,13 +165,16 @@ public class WatchService extends Service {
         StatusBarNotification[] sbns = notificationManager.getActiveNotifications();
         for (StatusBarNotification sbn : sbns) {
             PhoneNotification pn = new PhoneNotification(this, sbn);
-            activeNotifications.put(pn.getId(), pn);
+            if (!NotificationListener.filterNotification(this, pn.getSbn())) {
+                continue;
+            }
+            if (pn.getTemplate() != null
+                    && (pn.getTemplate().equals("android.app.Notification$DecoratedCustomViewStyle")
+                    || pn.getTemplate().equals("android.app.Notification$DecoratedMediaCustomViewStyle"))) {
+                continue;
+            }
+            localNotificationManager.putActiveNotification(pn);
         }
-
-        registerReceiver(batteryListener, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-
-        // Set the initial state
-        setState(ConnectionState.DISCONNECTED);
     }
 
     private void updateNotification(String title, String text) {
@@ -164,7 +188,7 @@ public class WatchService extends Service {
         localBroadcastManager.sendBroadcast(i);
     }
 
-    private void updateNotification() {
+    public void updateNotification() {
         String text;
         int chargeStatus = currentWatch.getStatus().getChargeStatus();
         if (chargeStatus == BatteryManager.BATTERY_STATUS_CHARGING) {
@@ -190,35 +214,12 @@ public class WatchService extends Service {
         connectionThread.start();
     }
 
-    public void handleMessage(String data) {
-        Capsule capsule = new Gson().fromJson(data, Capsule.class);
-        Log.d(TAG, "handleMessage: Got a new message with command: " + capsule.getCommand());
+    public Watch getCurrentWatch() {
+        return currentWatch;
+    }
 
-        switch (capsule.getCommand()) {
-            case SET_BATTERY_STATUS:
-                currentWatch.setStatus(capsule.getData(Status.class));
-                updateNotification();
-                Log.d(TAG, "handleMessage: Watch battery: " + currentWatch.getStatus().getBatteryLevel());
-                break;
-            case NOTIFICATION_ACTION_CALLBACK:
-                NotificationAction.Callback callback = capsule.getData(NotificationAction.Callback.class);
-                PhoneNotification pn = activeNotifications.get(callback.getNotificationId());
-                if (pn != null) {
-                    for (Notification.Action a : pn.getSbn().getNotification().actions) {
-                        if (a.hashCode() == callback.getHashCode()) {
-                            try {
-                                a.actionIntent.send(this, 0, new Intent());
-                            } catch (PendingIntent.CanceledException e) {
-                                e.printStackTrace();
-                            }
-                            break;
-                        }
-                    }
-                }
-                break;
-            default:
-                Log.d(TAG, "handleMessage: Unknown command: " + capsule.getCommand());
-        }
+    public void handleMessage(String data) {
+        commandHandler.handleCommand(data);
     }
 
     @Override
@@ -268,7 +269,7 @@ public class WatchService extends Service {
     }
 
     private void connected() {
-        sendBattery();
+        handleFirstConnection();
     }
 
     public void sendCommand(Command command, Object object) {

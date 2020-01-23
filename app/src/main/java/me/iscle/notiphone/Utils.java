@@ -5,9 +5,14 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.Icon;
 import android.util.Base64;
+
+import androidx.annotation.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -111,7 +116,31 @@ public class Utils {
         return Bitmap.createScaledBitmap(bitmap, finalWidth, finalHeight, true);
     }
 
-    public static String bitmapToBase64(Bitmap b) {
+    public static String iconToBase64(Context c, @Nullable Icon i) {
+        if (i == null)
+            return null;
+
+        return bitmapToBase64(drawableToBitmap(i.loadDrawable(c)));
+    }
+
+    public static Bitmap drawableToBitmap(Drawable d) {
+        if (d instanceof BitmapDrawable)
+            return ((BitmapDrawable) d).getBitmap();
+
+        if (d.getIntrinsicHeight() <= 0 || d.getIntrinsicHeight() <= 0)
+            return null;
+
+        Bitmap b = Bitmap.createBitmap(d.getIntrinsicWidth(), d.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        d.setBounds(0, 0, c.getWidth(), c.getHeight());
+        d.draw(c);
+        return b;
+    }
+
+    public static String bitmapToBase64(@Nullable Bitmap b) {
+        if (b == null)
+            return null;
+
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
         b.compress(Bitmap.CompressFormat.WEBP, 25, baos);

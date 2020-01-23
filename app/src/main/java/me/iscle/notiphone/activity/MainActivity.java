@@ -1,5 +1,6 @@
 package me.iscle.notiphone.activity;
 
+import android.app.Notification;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -8,26 +9,40 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
+import android.view.View;
+import android.widget.RemoteViews;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.bottomnavigation.BottomNavigationView.OnNavigationItemSelectedListener;
+import com.google.gson.Gson;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import me.iscle.notiphone.Command;
 import me.iscle.notiphone.fragment.HomeFragment;
 import me.iscle.notiphone.fragment.SettingsFragment;
 import me.iscle.notiphone.R;
+import me.iscle.notiphone.model.PhoneNotification;
 import me.iscle.notiphone.service.WatchService;
 
+import static android.app.Notification.EXTRA_COLORIZED;
+import static android.app.Notification.EXTRA_MEDIA_SESSION;
 import static android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS;
+import static me.iscle.notiphone.Constants.BROADCAST_NOTIFICATION_POSTED;
+import static me.iscle.notiphone.Constants.BROADCAST_NOTIFICATION_REMOVED;
 import static me.iscle.notiphone.Constants.BROADCAST_SERVICE_NOTIFICATION_UPDATED;
 import static me.iscle.notiphone.Constants.BROADCAST_WATCH_CONNECTED;
 import static me.iscle.notiphone.Constants.BROADCAST_WATCH_CONNECTING;
@@ -110,6 +125,11 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNavigationView = findViewById(R.id.navigation);
         bottomNavigationView.setOnNavigationItemSelectedListener(navigationListener);
 
+        IntentFilter notificationFilter = new IntentFilter();
+        notificationFilter.addAction(BROADCAST_NOTIFICATION_POSTED);
+        notificationFilter.addAction(BROADCAST_NOTIFICATION_REMOVED);
+        localBroadcastManager.registerReceiver(notificationListener, notificationFilter);
+
         IntentFilter watchServiceReceiverFilter = new IntentFilter();
         watchServiceReceiverFilter.addAction(BROADCAST_WATCH_CONNECTED);
         watchServiceReceiverFilter.addAction(BROADCAST_WATCH_CONNECTING);
@@ -118,6 +138,27 @@ public class MainActivity extends AppCompatActivity {
         watchServiceReceiverFilter.addAction(BROADCAST_SERVICE_NOTIFICATION_UPDATED);
         localBroadcastManager.registerReceiver(watchServiceReceiver, watchServiceReceiverFilter);
     }
+
+    private final BroadcastReceiver notificationListener = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Bundle extras = intent.getExtras();
+
+            switch (intent.getAction()) {
+                case BROADCAST_NOTIFICATION_POSTED:
+                    PhoneNotification pn = new Gson().fromJson(intent.getStringExtra("phoneNotification"), PhoneNotification.class);
+                    //Notification.Builder b = Notification.Builder.recoverBuilder(MainActivity.this, pn.getSbn().getNotification());
+                    //RemoteViews rv = b.createContentView();
+                    //homeFragment.getNotificationFrame().removeAllViews();
+                    //View v = rv.apply(MainActivity.this, homeFragment.getNotificationFrame());
+                    //homeFragment.getNotificationFrame().addView(v);
+                    break;
+                case BROADCAST_NOTIFICATION_REMOVED:
+
+                    break;
+            }
+        }
+    };
 
     @Override
     protected void onDestroy() {

@@ -5,4 +5,5 @@
     <string name="title_settings">Settings</string>
     <string name="no_watch_connected">No watch connected…</string>
     <string name="click_to_open_the_app">Click to open the app</string>
+    <string name="notification_listener_label">Get notifications on your watch</string>
 </resources>
