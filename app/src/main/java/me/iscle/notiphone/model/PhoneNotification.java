@@ -2,29 +2,15 @@ package me.iscle.notiphone.model;
 
 import android.app.Notification;
 import android.content.Context;
-import android.content.res.Resources;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.Icon;
 import android.media.session.MediaSession;
+import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
-import android.widget.RemoteViews;
 
-import com.google.gson.Gson;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Serializable;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 
-import me.iscle.notiphone.R;
 import me.iscle.notiphone.Utils;
 
 import static android.app.Notification.EXTRA_BIG_TEXT;
@@ -34,7 +20,6 @@ import static android.app.Notification.EXTRA_CONVERSATION_TITLE;
 import static android.app.Notification.EXTRA_INFO_TEXT;
 import static android.app.Notification.EXTRA_LARGE_ICON_BIG;
 import static android.app.Notification.EXTRA_MEDIA_SESSION;
-import static android.app.Notification.EXTRA_MESSAGES;
 import static android.app.Notification.EXTRA_PICTURE;
 import static android.app.Notification.EXTRA_PROGRESS;
 import static android.app.Notification.EXTRA_PROGRESS_INDETERMINATE;
@@ -48,13 +33,14 @@ import static android.app.Notification.EXTRA_TEXT;
 import static android.app.Notification.EXTRA_TEXT_LINES;
 import static android.app.Notification.EXTRA_TITLE;
 import static android.app.Notification.EXTRA_TITLE_BIG;
-import static me.iscle.notiphone.Utils.bitmapToBase64;
-import static me.iscle.notiphone.Utils.drawableToBase64;
-import static me.iscle.notiphone.Utils.getApplicationName;
-import static me.iscle.notiphone.Utils.iconToBase64;
 
 public class PhoneNotification {
     private static final String TAG = "PhoneNotification";
+
+    private static final int MAX_HEIGHT = 1024;
+    private static final int MAX_WIDTH = 1024;
+
+    public static final String EXTRA_WEARABLE_EXTENSIONS = "android.wearable.EXTENSIONS";
 
     private final transient StatusBarNotification sbn;
 
@@ -64,10 +50,12 @@ public class PhoneNotification {
     private final String groupKey;
     private final int id;
     private final String key;
+    private final String opPkg;
     private final String overrideGroupKey;
     private final String packageName;
     private final long postTime;
     private final String tag;
+    private final boolean isAppGroup;
     private final boolean isClearable;
     private final boolean isGroup;
     private final boolean isOngoing;
@@ -110,21 +98,31 @@ public class PhoneNotification {
     private final String title;
     private final String titleBig;
 
-    public PhoneNotification(Context c, StatusBarNotification sbn) {
+    public PhoneNotification(Context context, StatusBarNotification sbn) {
         final long startTime = System.currentTimeMillis();
 
         this.sbn = sbn;
 
-        this.appName = getApplicationName(c, sbn.getPackageName());
+        this.appName = Utils.getApplicationName(context, sbn.getPackageName());
 
        // StatusBarNotification data
         this.groupKey = sbn.getGroupKey();
         this.id = sbn.getId();
         this.key = sbn.getKey();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.opPkg = sbn.getOpPkg();
+        } else {
+            this.opPkg = null;
+        }
         this.overrideGroupKey = sbn.getOverrideGroupKey();
         this.packageName = sbn.getPackageName();
         this.postTime = sbn.getPostTime();
         this.tag = sbn.getTag();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            this.isAppGroup = sbn.isAppGroup();
+        } else {
+            this.isAppGroup = false;
+        }
         this.isClearable = sbn.isClearable();
         this.isGroup = sbn.isGroup();
         this.isOngoing = sbn.isOngoing();
@@ -135,26 +133,10 @@ public class PhoneNotification {
             this.actions = null;
         } else {
             this.actions = new NotificationAction[n.actions.length];
-            Field resIdField;
-            try {
-                resIdField = Icon.class.getDeclaredField("mInt1");
-                resIdField.setAccessible(true);
-            } catch (NoSuchFieldException e) {
-                resIdField = null;
-            }
 
             for (int i = 0; i < actions.length; i++) {
                 Notification.Action na = n.actions[i];
-                Drawable icon;
-                if (resIdField != null && na.getIcon() != null) {
-                    try {
-                        icon = Utils.getDrawableFromPackage(c, resIdField.getInt(na.getIcon()), sbn.getPackageName());
-                    } catch (IllegalAccessException e) {
-                        icon = null;
-                    }
-                } else {
-                    icon = null;
-                }
+                String icon = Utils.drawableToBase64(Utils.getNotificationIconDrawable(context, sbn.getPackageName(), na.getIcon()), MAX_WIDTH, MAX_HEIGHT);
                 this.actions[i] = new NotificationAction(na.title.toString(), icon, na.hashCode());
             }
         }
@@ -166,53 +148,51 @@ public class PhoneNotification {
         this.visibility = n.visibility;
         this.when = n.when;
         this.group = n.getGroup();
-        this.largeIcon = n.getLargeIcon() != null ? drawableToBase64(n.getLargeIcon().loadDrawable(c), 400, 400) : null;
-        this.smallIcon = n.getSmallIcon() != null ? drawableToBase64(n.getSmallIcon().loadDrawable(c), 400, 400) : null;
+        this.largeIcon = Utils.drawableToBase64(Utils.getNotificationIconDrawable(context, sbn.getPackageName(), n.getLargeIcon()), MAX_WIDTH, MAX_HEIGHT);
+        this.smallIcon = Utils.drawableToBase64(Utils.getNotificationIconDrawable(context, sbn.getPackageName(), n.getSmallIcon()), MAX_WIDTH, MAX_HEIGHT);
         this.sortKey = n.getSortKey();
         this.iconLevel = n.iconLevel;
 
         // Notification data extras
         Bundle extras = n.extras;
-        Log.d(TAG, "PhoneNotification: " + extras.getCharSequence(EXTRA_TITLE).getClass().getName());
-        this.bigText = extras.getCharSequence(EXTRA_BIG_TEXT) == null ? null : extras.getCharSequence(EXTRA_BIG_TEXT).toString();
+        Log.d(TAG, "PhoneNotification: extras = " + extras.toString());
+        this.bigText = Utils.toString(extras.getCharSequence(EXTRA_BIG_TEXT));
         this.chronometerCountDown = extras.getBoolean(EXTRA_CHRONOMETER_COUNT_DOWN);
         this.compactActions = extras.getIntArray(EXTRA_COMPACT_ACTIONS);
-        this.conversationTitle = extras.getCharSequence(EXTRA_CONVERSATION_TITLE) == null ? null : extras.getCharSequence(EXTRA_CONVERSATION_TITLE).toString();
-        this.infoText = extras.getCharSequence(EXTRA_INFO_TEXT) == null ? null : extras.getCharSequence(EXTRA_INFO_TEXT).toString();
-        this.largeIconBig = iconToBase64(c, extras.getParcelable(EXTRA_LARGE_ICON_BIG));
-        if (this.largeIconBig == null) Log.d(TAG, "PhoneNotification: largeIconBig is null!!!!!");
+        this.conversationTitle = Utils.toString(extras.getCharSequence(EXTRA_CONVERSATION_TITLE));
+        this.infoText = Utils.toString(extras.getCharSequence(EXTRA_INFO_TEXT));
+        this.largeIconBig = Utils.iconToBase64(context, extras.getParcelable(EXTRA_LARGE_ICON_BIG));
         MediaSession.Token mediaSessionToken = extras.getParcelable(EXTRA_MEDIA_SESSION);
         this.mediaSession = mediaSessionToken != null ? mediaSessionToken.hashCode() : null;
         //this.messages = (Bundle[]) extras.getParcelableArray(EXTRA_MESSAGES);
         this.messages = null;
-        if (extras.getParcelable(EXTRA_PICTURE) == null) Log.d(TAG, "PhoneNotification: picture is null!!!!!");
-        this.picture = bitmapToBase64(extras.getParcelable(EXTRA_PICTURE));
+        this.picture = Utils.bitmapToBase64(extras.getParcelable(EXTRA_PICTURE));
         this.progress = extras.getInt(EXTRA_PROGRESS);
         this.progressIndeterminate = extras.getBoolean(EXTRA_PROGRESS_INDETERMINATE);
         this.progressMax = extras.getInt(EXTRA_PROGRESS_MAX);
         this.showChronometer = extras.getBoolean(EXTRA_SHOW_CHRONOMETER);
         this.showWhen = extras.getBoolean(EXTRA_SHOW_WHEN);
-        this.subText = extras.getCharSequence(EXTRA_SUB_TEXT) == null ? null : extras.getCharSequence(EXTRA_SUB_TEXT).toString();
-        this.summaryText = extras.getCharSequence(EXTRA_SUMMARY_TEXT) == null ? null : extras.getCharSequence(EXTRA_SUMMARY_TEXT).toString();
+        this.subText = Utils.toString(extras.getCharSequence(EXTRA_SUB_TEXT));
+        this.summaryText = Utils.toString(extras.getCharSequence(EXTRA_SUMMARY_TEXT));
         this.template = extras.getString(EXTRA_TEMPLATE);
-        this.text = extras.getCharSequence(EXTRA_TEXT) == null ? null : extras.getCharSequence(EXTRA_TEXT).toString();
-        CharSequence[] textLinesCsA = extras.getCharSequenceArray(EXTRA_TEXT_LINES);
-        if (textLinesCsA != null) {
-            this.textLines = new String[textLinesCsA.length];
-            for (int i = 0; i < textLinesCsA.length; i++) {
-                this.textLines[i] = textLinesCsA[i].toString();
+        this.text = Utils.toString(extras.getCharSequence(EXTRA_TEXT));
+        CharSequence[] textLinesCSA = extras.getCharSequenceArray(EXTRA_TEXT_LINES);
+        if (textLinesCSA != null) {
+            this.textLines = new String[textLinesCSA.length];
+            for (int i = 0; i < textLinesCSA.length; i++) {
+                this.textLines[i] = textLinesCSA[i].toString();
             }
         } else {
             this.textLines = null;
         }
-        this.title = extras.getCharSequence(EXTRA_TITLE) == null ? null : extras.getCharSequence(EXTRA_TITLE).toString();
-        this.titleBig = extras.getCharSequence(EXTRA_TITLE_BIG) == null ? null : extras.getCharSequence(EXTRA_TITLE_BIG).toString();
+        this.title = Utils.toString(extras.getCharSequence(EXTRA_TITLE));
+        this.titleBig = Utils.toString(extras.getCharSequence(EXTRA_TITLE_BIG));
 
         // Notification builder
         if (extras.getBoolean("android.contains.customView", false))
-            throw new RuntimeException("This notification has a customView which is not supported right now!");
+            throw new RuntimeException("This notification has a customView which is not supported right now");
 
-        Notification.Builder b = Notification.Builder.recoverBuilder(c, sbn.getNotification());
+        Notification.Builder b = Notification.Builder.recoverBuilder(context, sbn.getNotification());
         if (TextUtils.isEmpty(template)) {
 
         } else {
@@ -238,6 +218,10 @@ public class PhoneNotification {
     }
 
     public static String getId(StatusBarNotification sbn) {
+        if (sbn == null) {
+            Log.e(TAG, "getId: sbn is null!?");
+            return "";
+        }
         return getId(sbn.getPackageName(), sbn.getId());
     }
 
@@ -413,7 +397,57 @@ public class PhoneNotification {
         return titleBig;
     }
 
-    public String toJson() {
-        return new Gson().toJson(this);
+    @Override
+    public String toString() {
+        return "PhoneNotification{" +
+                "sbn=" + sbn +
+                ", appName='" + appName + '\'' +
+                ", groupKey='" + groupKey + '\'' +
+                ", id=" + id +
+                ", key='" + key + '\'' +
+                ", opPkg='" + opPkg + '\'' +
+                ", overrideGroupKey='" + overrideGroupKey + '\'' +
+                ", packageName='" + packageName + '\'' +
+                ", postTime=" + postTime +
+                ", tag='" + tag + '\'' +
+                ", isAppGroup=" + isAppGroup +
+                ", isClearable=" + isClearable +
+                ", isGroup=" + isGroup +
+                ", isOngoing=" + isOngoing +
+                ", actions=" + Arrays.toString(actions) +
+                ", category='" + category + '\'' +
+                ", color=" + color +
+                ", flags=" + flags +
+                ", number=" + number +
+                ", tickerText='" + tickerText + '\'' +
+                ", visibility=" + visibility +
+                ", when=" + when +
+                ", group='" + group + '\'' +
+                ", largeIcon='" + (largeIcon != null) + '\'' +
+                ", smallIcon='" + (smallIcon != null) + '\'' +
+                ", sortKey='" + sortKey + '\'' +
+                ", iconLevel=" + iconLevel +
+                ", bigText='" + bigText + '\'' +
+                ", chronometerCountDown=" + chronometerCountDown +
+                ", compactActions=" + Arrays.toString(compactActions) +
+                ", conversationTitle='" + conversationTitle + '\'' +
+                ", infoText='" + infoText + '\'' +
+                ", largeIconBig='" + (largeIconBig != null) + '\'' +
+                ", mediaSession=" + mediaSession +
+                ", messages=" + Arrays.toString(messages) +
+                ", picture='" + picture + '\'' +
+                ", progress=" + progress +
+                ", progressIndeterminate=" + progressIndeterminate +
+                ", progressMax=" + progressMax +
+                ", showChronometer=" + showChronometer +
+                ", showWhen=" + showWhen +
+                ", subText='" + subText + '\'' +
+                ", summaryText='" + summaryText + '\'' +
+                ", template='" + template + '\'' +
+                ", text='" + text + '\'' +
+                ", textLines=" + Arrays.toString(textLines) +
+                ", title='" + title + '\'' +
+                ", titleBig='" + titleBig + '\'' +
+                '}';
     }
 }

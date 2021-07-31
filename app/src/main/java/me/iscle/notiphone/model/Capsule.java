@@ -2,6 +2,8 @@ package me.iscle.notiphone.model;
 
 import com.google.gson.Gson;
 
+import java.nio.charset.StandardCharsets;
+
 import me.iscle.notiphone.Command;
 
 public final class Capsule {
@@ -25,5 +27,9 @@ public final class Capsule {
 
     public <T> T getData(Class<T> type) {
         return gson.fromJson(data, type);
+    }
+
+    public static Capsule fromBytes(byte[] data) {
+        return gson.fromJson(new String(data, StandardCharsets.UTF_8), Capsule.class);
     }
 }

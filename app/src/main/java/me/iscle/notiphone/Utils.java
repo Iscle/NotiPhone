@@ -1,5 +1,6 @@
 package me.iscle.notiphone;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -10,14 +11,20 @@ import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
+import android.os.Build;
+import android.text.TextUtils;
 import android.util.Base64;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -27,17 +34,6 @@ public class Utils {
 
     public static boolean hasBLE(Context context) {
         return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
-    }
-
-    public static boolean isMiui() {
-        try {
-            Class<?> c = Class.forName("android.os.SystemProperties");
-            Method get = c.getMethod("get", String.class);
-            String miuiVersionCode = (String) get.invoke(c, "ro.miui.ui.version.code");
-            return miuiVersionCode != null;
-        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            return false;
-        }
     }
 
     public static String[] csArrayToString(CharSequence[] csArray) {
@@ -82,7 +78,10 @@ public class Utils {
         return new String(baos.toByteArray(), StandardCharsets.UTF_8);
     }
 
-    public static String drawableToBase64(Drawable d, int maxWidth, int maxHeight) {
+    @Nullable
+    public static String drawableToBase64(@Nullable Drawable d, int maxWidth, int maxHeight) {
+        if (d == null)
+            return null;
         return bitmapToBase64(resizeMaxBitmap(getBitmapFromVectorDrawable(d), maxWidth, maxHeight));
     }
 
@@ -185,5 +184,107 @@ public class Utils {
         drawable.draw(canvas);
 
         return bitmap;
+    }
+
+    @SuppressLint("ResourceType")
+    @Nullable
+    public static Drawable getNotificationIconDrawable(Context context, String packageName, @Nullable Icon icon) {
+        if (icon == null)
+            return null;
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                if (icon.getType() != Icon.TYPE_RESOURCE || packageName.equals(icon.getResPackage()) || "com.android.systemui".equals(packageName)) {
+                    return icon.loadDrawable(context);
+                }
+
+                String resPackage = icon.getResPackage();
+                // figure out where to load resources from
+                if (TextUtils.isEmpty(resPackage)) {
+                    // if none is specified, try the given context
+                    resPackage = packageName;
+                }
+                Resources resources;
+                if ("android".equals(resPackage)) {
+                    resources = Resources.getSystem();
+                } else {
+                    final PackageManager pm = context.getPackageManager();
+                    try {
+                        ApplicationInfo ai = pm.getApplicationInfo(
+                                resPackage, PackageManager.MATCH_UNINSTALLED_PACKAGES);
+                        if (ai != null) {
+                            resources = pm.getResourcesForApplication(ai);
+                        } else {
+                            Log.e(TAG, "getNotificationIconDrawable: failed to get application info for package " + resPackage);
+                            return null;
+                        }
+                    } catch (PackageManager.NameNotFoundException e) {
+                        Log.e(TAG, "getNotificationIconDrawable: Unable to get package resources", e);
+                        return null;
+                    }
+                }
+                return ResourcesCompat.getDrawable(resources, icon.getResId(), context.getTheme());
+            } else { // Let's use reflection :)
+                try {
+                    Field mTypeField = Icon.class.getDeclaredField("mType");
+                    mTypeField.setAccessible(true);
+                    Field mString1Field = Icon.class.getDeclaredField("mString1");
+                    mString1Field.setAccessible(true);
+                    String resPackage = (String) mString1Field.get(icon);
+                    if (mTypeField.getInt(icon) != Icon.TYPE_RESOURCE || packageName.equals(resPackage)) {
+                        return icon.loadDrawable(context);
+                    }
+
+                    // figure out where to load resources from
+                    if (TextUtils.isEmpty(resPackage)) {
+                        // if none is specified, try the given context
+                        resPackage = packageName;
+                    }
+                    Resources resources;
+                    if ("android".equals(resPackage)) {
+                        resources = Resources.getSystem();
+                    } else {
+                        final PackageManager pm = context.getPackageManager();
+                        try {
+                            ApplicationInfo ai = pm.getApplicationInfo(
+                                    resPackage, PackageManager.MATCH_UNINSTALLED_PACKAGES);
+                            if (ai != null) {
+                                resources = pm.getResourcesForApplication(ai);
+                            } else {
+                                Log.e(TAG, "getNotificationIconDrawable: failed to get application info for package " + resPackage);
+                                return null;
+                            }
+                        } catch (PackageManager.NameNotFoundException e) {
+                            Log.e(TAG, "getNotificationIconDrawable: Unable to get package resources", e);
+                            return null;
+                        }
+                    }
+                    Field mInt1Field = Icon.class.getDeclaredField("mInt1");
+                    mInt1Field.setAccessible(true);
+                    return ResourcesCompat.getDrawable(resources, mInt1Field.getInt(icon), context.getTheme());
+                } catch (IllegalAccessException | NoSuchFieldException e) {
+                    Log.e(TAG, "getNotificationIconDrawable: reflection failed!", e);
+                    return null;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getNotificationIconDrawable: FIX ME!", e);
+            return null;
+        }
+    }
+
+    public static String toString(CharSequence cs) {
+        if (cs == null)
+            return null;
+
+        return cs.toString();
+    }
+
+    public static void closeCloseable(Closeable closeable) {
+        try {
+            closeable.close();
+        } catch (IOException e) {
+            // Ignored
+        }
     }
 }

@@ -1,21 +1,13 @@
 package me.iscle.notiphone.model;
 
-import android.graphics.drawable.Drawable;
-
-import me.iscle.notiphone.Utils;
-
 public class NotificationAction {
     private final String title;
     private final String icon;
     private final int hashCode;
 
-    public NotificationAction(String title, Drawable icon, int hashCode) {
+    public NotificationAction(String title, String icon, int hashCode) {
         this.title = title;
-        if (icon != null) {
-            this.icon = Utils.drawableToBase64(icon, 400, 400);
-        } else {
-            this.icon = null;
-        }
+        this.icon = icon;
         this.hashCode = hashCode;
     }
 

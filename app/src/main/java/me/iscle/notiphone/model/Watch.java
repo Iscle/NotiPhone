@@ -3,37 +3,48 @@ package me.iscle.notiphone.model;
 import android.bluetooth.BluetoothDevice;
 
 public class Watch {
-    private final String name;
-    private final String address;
-    private transient Status status;
-    private long lastConnection;
-    private boolean isBLE;
+    private final BluetoothDevice device;
+    private boolean supportsBle;
+    private long lastSeen;
+    private transient BatteryStatus batteryStatus;
 
     public Watch(BluetoothDevice device) {
-        this.name = device.getName();
-        this.address = device.getAddress();
-        this.status = null;
-        this.lastConnection = -1;
-        this.isBLE = false;
-    }
-
-    public void setLastConnection(long time) {
-        this.lastConnection = time;
+        this.device = device;
     }
 
     public String getName() {
-        return name;
+        return device.getName();
     }
 
     public String getAddress() {
-        return address;
+        return device.getAddress();
     }
 
-    public Status getStatus() {
-        return status;
+    public boolean isSupportsBle() {
+        return supportsBle;
     }
 
-    public void setStatus(Status status) {
-        this.status = status;
+    public void setSupportsBle(boolean supportsBle) {
+        this.supportsBle = supportsBle;
+    }
+
+    public long getLastSeen() {
+        return lastSeen;
+    }
+
+    public void setLastSeen(long lastSeen) {
+        this.lastSeen = lastSeen;
+    }
+
+    public BatteryStatus getBatteryStatus() {
+        return batteryStatus;
+    }
+
+    public void setBatteryStatus(BatteryStatus batteryStatus) {
+        this.batteryStatus = batteryStatus;
+    }
+
+    public int getBatteryPercentage() {
+        return batteryStatus.getBatteryPercentage();
     }
 }

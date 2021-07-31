@@ -39,7 +39,7 @@
                     android:layout_height="match_parent">
 
                     <TextView
-                        android:id="@+id/status"
+                        android:id="@+id/batteryStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
@@ -63,7 +63,7 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintHorizontal_bias="0.0"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@+id/status" />
+                        app:layout_constraintTop_toBottomOf="@+id/batteryStatus" />
 
                     <ImageView
                         android:id="@+id/watch_image"
@@ -116,7 +116,7 @@
                         android:layout_marginEnd="8dp"
                         android:layout_marginBottom="8dp"
                         android:contentDescription="Right Arrow"
-                        android:src="@drawable/ic_keyboard_arrow_right_black_24dp"
+                        android:src="@drawable/ic_right_arrow_hint"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toBottomOf="@+id/status_divider" />

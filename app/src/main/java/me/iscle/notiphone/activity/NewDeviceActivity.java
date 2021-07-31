@@ -23,20 +23,21 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 
-import me.iscle.notiphone.adapter.BluetoothRecyclerViewAdapter;
+import me.iscle.notiphone.NotiPhone;
+import me.iscle.notiphone.adapter.BluetoothDeviceAdapter;
 import me.iscle.notiphone.R;
 
 public class NewDeviceActivity extends AppCompatActivity implements View.OnClickListener {
     private static final int LOCATION_PERMISSION_REQUEST = 1;
 
-    private BluetoothRecyclerViewAdapter bluetoothRecyclerViewAdapter;
+    private BluetoothDeviceAdapter bluetoothDeviceAdapter;
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             switch (intent.getAction()) {
                 case BluetoothDevice.ACTION_FOUND:
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    bluetoothRecyclerViewAdapter.addItem(device);
+                    bluetoothDeviceAdapter.addItem(device);
                     break;
                 case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
                     unregisterReceiver(receiver);
@@ -56,10 +57,6 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_new_device);
 
-        // Configure the Action Bar
-        getSupportActionBar().setTitle("Select a device - NotiPhone");
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
         // Set result as canceled in case user doesn't choose a device
         setResult(RESULT_CANCELED);
 
@@ -67,12 +64,12 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         // Create a new adapter for the RecyclerView and attach an onClickListener to it
-        bluetoothRecyclerViewAdapter = new BluetoothRecyclerViewAdapter(new ArrayList<>(bluetoothAdapter.getBondedDevices()), this);
+        bluetoothDeviceAdapter = new BluetoothDeviceAdapter(new ArrayList<>(bluetoothAdapter.getBondedDevices()), this);
 
         RecyclerView btDevicesView = findViewById(R.id.bluetooth_device_list);
         btDevicesView.setLayoutManager(new LinearLayoutManager(btDevicesView.getContext()));
         btDevicesView.addItemDecoration(new DividerItemDecoration(btDevicesView.getContext(), DividerItemDecoration.VERTICAL));
-        btDevicesView.setAdapter(bluetoothRecyclerViewAdapter);
+        btDevicesView.setAdapter(bluetoothDeviceAdapter);
 
         Button startDiscovery = findViewById(R.id.start_discovery);
         startDiscovery.setOnClickListener(v -> {
@@ -105,7 +102,7 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
             ProgressBar scanningBar = findViewById(R.id.scanning_bar);
             scanningBar.setVisibility(View.VISIBLE);
 
-            bluetoothRecyclerViewAdapter.setItems(new ArrayList<>(bluetoothAdapter.getBondedDevices()));
+            bluetoothDeviceAdapter.setItems(new ArrayList<>(bluetoothAdapter.getBondedDevices()));
 
             // Register for broadcasts when a device is discovered.
             IntentFilter filter = new IntentFilter();
@@ -130,14 +127,8 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
     }
 
     @Override
-    public boolean onSupportNavigateUp() {
-        onBackPressed();
-        return true;
-    }
-
-    @Override
     public void onClick(View v) {
-        BluetoothRecyclerViewAdapter.ViewHolder vh = (BluetoothRecyclerViewAdapter.ViewHolder) v.getTag();
+        BluetoothDeviceAdapter.ViewHolder vh = (BluetoothDeviceAdapter.ViewHolder) v.getTag();
 
         if (bluetoothAdapter.isDiscovering()) {
             bluetoothAdapter.cancelDiscovery();
@@ -149,6 +140,7 @@ public class NewDeviceActivity extends AppCompatActivity implements View.OnClick
 
         // Get the BluetoothDevice from that item
         BluetoothDevice bd = vh.getDevice();
+        ((NotiPhone) getApplication()).getNotiPhoneService().connect(bd.getAddress());
 
         Intent intent = new Intent();
         intent.putExtra("BluetoothAddress", bd.getAddress());

@@ -8,9 +8,6 @@ import android.widget.Toast;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
-import com.mikepenz.aboutlibraries.Libs;
-import com.mikepenz.aboutlibraries.LibsBuilder;
-
 import me.iscle.notiphone.activity.NewDeviceActivity;
 import me.iscle.notiphone.BuildConfig;
 import me.iscle.notiphone.R;
@@ -49,16 +46,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 
         Preference aboutButton = findPreference("about");
         aboutButton.setOnPreferenceClickListener(preference -> {
-            new LibsBuilder()
-                    .withActivityTitle("About")
-                    .withAboutAppName("NotiPhone")
-                    .withAboutIconShown(true)
-                    // TODO: CHANGE DESCRIPTION
-                    .withAboutDescription("NotiPhone is an app created to...")
-                    .withActivityStyle(Libs.ActivityStyle.LIGHT_DARK_TOOLBAR)
-                    .withLicenseShown(true)
-                    .withFields(R.string.class.getFields())
-                    .start(getContext());
+
             return true;
         });
 

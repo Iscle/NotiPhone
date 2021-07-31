@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".onboarding.OnboardingActivity">
+
+    <include
+        android:id="@+id/bottom"
+        layout="@layout/activity_onboarding_bottom"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:elevation="4dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/linearLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@+id/bottom"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <CheckBox
+            android:id="@+id/notification_access"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Notification access" />
+
+        <CheckBox
+            android:id="@+id/storage_access"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Storage access" />
+
+        <CheckBox
+            android:id="@+id/location_access"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Location access" />
+
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_undraw_sync4_xlc6" />
+</androidx.constraintlayout.widget.ConstraintLayout>
